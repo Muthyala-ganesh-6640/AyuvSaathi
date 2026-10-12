@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand Identity Colors */
+  --brand-navy: #17466B;
+  --brand-teal: #087F8C;
+  --brand-teal-deep: #07545B;
+  --brand-green: #16A879;
+  --brand-leaf: #4DBE64;
+
+  /* Surfaces & Backgrounds */
+  --background: #F7FAFC;
+  --surface: #FFFFFF;
+  --surface-mint: #EFF9F5;
+  --surface-aqua: #DDF5F0;
+
+  /* Typography */
+  --text-primary: #17344F;
+  --text-secondary: #61768A;
+  --text-muted: #8294A4;
+
+  /* Dividers & Borders */
+  --border: #E1EBF0;
+  --divider: #E9F0F3;
+
+  /* Semantic Status Colors */
+  --success: #219B65;
+  --info: #3186F6;
+  --warning: #E9A23B;
+  --critical: #D94B55;
+
+  /* Geometry & Elevation */
+  --radius-card: 14px;
+  --radius-control: 8px;
+  --shadow-card: 0 1px 3px rgba(23, 70, 107, 0.04), 0 2px 8px rgba(23, 70, 107, 0.04);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Noto Sans Telugu", "Noto Sans Devanagari", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Healthcare UI Utilities */
+.bg-brand-navy { background-color: var(--brand-navy); }
+.text-brand-navy { color: var(--brand-navy); }
+
+.bg-brand-teal { background-color: var(--brand-teal); }
+.text-brand-teal { color: var(--brand-teal); }
+.border-brand-teal { border-color: var(--brand-teal); }
+
+.bg-brand-green { background-color: var(--brand-green); }
+.text-brand-green { color: var(--brand-green); }
+
+.bg-surface-mint { background-color: var(--surface-mint); }
+.bg-surface-aqua { background-color: var(--surface-aqua); }
+
+.border-subtle { border-color: var(--border); }
+.text-secondary-muted { color: var(--text-secondary); }
+
+/* Accessible Focus States */
+:focus-visible {
+  outline: 2px solid var(--brand-teal);
+  outline-offset: 2px;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}

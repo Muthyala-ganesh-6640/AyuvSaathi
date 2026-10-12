@@ -1,0 +1,1030 @@
+"use client";
+
+import { useTranslations, useLocale } from "next-intl";
+import { Link, useRouter, usePathname } from "@/i18n/navigation";
+import { BrandLogo } from "@/components/brand/BrandLogo";
+import {
+  Search,
+  Bell,
+  Globe,
+  ChevronDown,
+  LayoutDashboard,
+  FileText,
+  ClipboardList,
+  FolderHeart,
+  Bot,
+  FileCheck2,
+  Pill,
+  BarChart3,
+  MapPin,
+  Settings,
+  HeartPulse,
+  Activity,
+  User,
+  LogOut,
+  Upload,
+  ArrowRight,
+  ShieldCheck,
+  Check,
+  Sparkles,
+  ChevronRight,
+  Zap,
+  Building2,
+} from "lucide-react";
+import { useCallback, useState, useEffect } from "react";
+import { toast } from "sonner";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
+import { formatDate } from "@/lib/utils";
+
+interface DashboardData {
+  user: {
+    displayName: string;
+    email: string;
+    interfaceLanguage: string;
+    timezone: string;
+  };
+  today: string;
+  medicines: {
+    id: string;
+    medicationId: string;
+    medicationName: string;
+    scheduledTime: string;
+    status: "pending" | "taken" | "skipped" | "missed";
+    synthetic?: boolean;
+  }[];
+  documents: {
+    id: string;
+    displayName: string;
+    category: string;
+    processingStatus: string;
+    sourceDate?: string;
+    createdAt: string;
+  }[];
+  recentLabReports?: {
+    id: string;
+    displayName: string;
+    category: string;
+    processingStatus: string;
+    sourceDate?: string;
+    createdAt: string;
+  }[];
+  recentDischargeSummaries?: {
+    id: string;
+    displayName: string;
+    category: string;
+    processingStatus: string;
+    createdAt: string;
+  }[];
+  recentDoctorVisitDocs?: {
+    id: string;
+    displayName: string;
+    category: string;
+    processingStatus: string;
+    createdAt: string;
+  }[];
+  recentPrescriptionDocs?: {
+    id: string;
+    displayName: string;
+    category: string;
+    processingStatus: string;
+    createdAt: string;
+  }[];
+  recentMedications: {
+    id: string;
+    name: string;
+    strength: string;
+    instructions: string;
+    status: string;
+    provenance: string;
+  }[];
+  timeline: {
+    id: string;
+    type: string;
+    summary: string;
+    eventDate: string;
+    provenance: string;
+    relatedId?: string;
+  }[];
+  visits?: {
+    id: string;
+    title: string;
+    content: string;
+    createdAt: string;
+  }[];
+  upcomingAppointments: {
+    id: string;
+    title: string;
+    facility?: string;
+    startsAt: string;
+  }[];
+  observationCount: number;
+  glucoseObservations?: {
+    id: string;
+    name: string;
+    value: string;
+    unit: string;
+    referenceRange?: string;
+    sourceDate?: string;
+    createdAt: string;
+  }[];
+  stats?: {
+    labReportsCount: number;
+    remindersCount: number;
+    treatmentPlansCount: number;
+    medicalRecordsCount: number;
+  };
+}
+
+export default function DashboardPage() {
+  const t = useTranslations("dashboard");
+  const common = useTranslations("common");
+  const nav = useTranslations("nav");
+  const header = useTranslations("header");
+  const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<"3" | "6" | "12">("3");
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+
+  // Compute Greeting strictly based on Indian Standard Time (IST, UTC+5:30)
+  const getIstGreeting = () => {
+    const now = new Date();
+    const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+    const istDate = new Date(utcTime + 5.5 * 3600000);
+    const hour = istDate.getHours();
+
+    if (hour >= 4 && hour < 12) {
+      return t("goodMorning");
+    } else if (hour >= 12 && hour < 17) {
+      return t("goodAfternoon");
+    } else {
+      return t("goodEvening");
+    }
+  };
+
+  const fetchDashboard = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard");
+      if (res.status === 401) {
+        router.push("/auth/sign-in");
+        return;
+      }
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
+      }
+    } catch {
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  const handleSignOut = async () => {
+    try {
+      await fetch("/api/auth/sign-out", { method: "POST" });
+      toast.success("Signed out successfully");
+      router.push("/auth/sign-in");
+    } catch {
+      toast.error("Sign out failed");
+    }
+  };
+
+  const handleLanguageChange = (newLocale: "en" | "te" | "hi") => {
+    setLangDropdownOpen(false);
+    router.replace(pathname, { locale: newLocale });
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    router.push(`/reports?search=${encodeURIComponent(searchQuery)}`);
+  };
+
+  const handlePromptClick = (promptText: string) => {
+    router.push(`/assistant?q=${encodeURIComponent(promptText)}`);
+  };
+
+  // Nav menu items including dedicated Discharge Summary section
+  const navItems = [
+    { href: "/dashboard", label: nav("dashboard"), icon: LayoutDashboard, active: true },
+    { href: "/reports", label: nav("reports"), icon: FileText },
+    { href: "/discharge-summary", label: nav("dischargeSummary"), icon: Building2 },
+    { href: "/doctor-summary", label: nav("doctorSummary"), icon: ClipboardList },
+    { href: "/timeline", label: nav("timeline"), icon: FolderHeart },
+    { href: "/assistant", label: nav("assistant"), icon: Bot },
+    { href: "/prescriptions", label: nav("prescriptions"), icon: FileCheck2 },
+    { href: "/reminders", label: nav("reminders"), icon: Pill, badge: data?.stats?.remindersCount ?? 0 },
+    { href: "/analytics", label: nav("analytics"), icon: BarChart3 },
+    { href: "/find-care", label: nav("findCare"), icon: MapPin },
+    { href: "/settings", label: nav("settings"), icon: Settings },
+  ];
+
+  // Show only reminders based on the user's actual scheduled doses.
+  const dynamicReminders =
+    data?.medicines && data.medicines.length > 0
+      ? data.medicines.slice(0, 3).map((med, idx) => {
+          const isTaken = med.status === "taken";
+          return {
+            id: med.id,
+            name: med.medicationName,
+            instruction: `${med.scheduledTime} · Scheduled Dose`,
+            status: isTaken ? t("taken") : t("upcoming"),
+            badgeColor: isTaken ? "bg-[#D9F8E8] text-[#1E824C]" : "bg-[#E4F1FF] text-[#206bc4]",
+            iconBg: idx === 0 ? "bg-[#DDF5F1] text-[#087F8C]" : idx === 1 ? "bg-[#FFF0DC] text-[#F59A35]" : "bg-[#FFE7E9] text-[#E03131]",
+          };
+        })
+      : [];
+
+  // Dynamic Recent Activity mapped strictly from genuine chronological events
+  const dynamicActivities =
+    data?.timeline && data.timeline.length > 0
+      ? data.timeline.slice(0, 5).map((ev) => {
+          let color = "bg-[#3186F6]";
+          let title = t("actLabUploaded");
+          if (ev.type === "prescription") {
+            color = "bg-[#8B5CE8]";
+            title = t("actPrescriptionAnalyzed");
+          } else if (ev.type === "medication" || ev.type === "dose") {
+            color = "bg-[#F59A35]";
+            title = t("actMedicineReminder");
+          } else if (ev.type === "visit" || ev.type === "consultation") {
+            color = "bg-[#28AD65]";
+            title = t("actTreatmentUpdated");
+          } else if (ev.type === "discharge") {
+            color = "bg-[#8B5CE8]";
+            title = t("actRecordAdded");
+          }
+
+          return {
+            id: ev.id,
+            title,
+            desc: ev.summary,
+            time: formatDate(ev.eventDate, locale),
+            color,
+          };
+        })
+      : [];
+
+  // Dynamic Recent Lab Reports mapped from user's genuine lab reports only
+  const dynamicLabReports =
+    data?.recentLabReports && data.recentLabReports.length > 0
+      ? data.recentLabReports.slice(0, 3).map((r) => ({
+          id: r.id,
+          name: r.displayName,
+          date: formatDate(r.sourceDate || r.createdAt, locale),
+          source: "Medical Record",
+          status: r.processingStatus === "extracted" ? "Processed" : r.processingStatus,
+        }))
+      : [];
+
+  // Dynamic Recent Medical Records with direct dedicated routing
+  const dynamicMedicalRecords = [
+    ...(data?.recentDoctorVisitDocs ?? []).map((document) => ({
+      key: `doctor-visit-${document.id}`,
+      title: document.displayName,
+      date: `${formatDate(document.createdAt, locale)} · ${t("actTreatmentUpdated")}`,
+      href: "/doctor-summary",
+    })),
+    ...(data?.recentPrescriptionDocs ?? []).map((document) => ({
+      key: `prescription-${document.id}`,
+      title: document.displayName,
+      date: formatDate(document.createdAt, locale),
+      href: "/prescriptions",
+    })),
+    ...(data?.recentDischargeSummaries ?? []).map((document) => ({
+      key: `discharge-summary-${document.id}`,
+      title: document.displayName,
+      date: formatDate(document.createdAt, locale),
+      href: "/discharge-summary",
+    })),
+    ...(data?.recentLabReports ?? []).map((document) => ({
+      key: `lab-report-${document.id}`,
+      title: document.displayName,
+      date: formatDate(document.sourceDate || document.createdAt, locale),
+      href: `/reports/${document.id}`,
+    })),
+  ].slice(0, 4);
+
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - Number(dateRange));
+  const chartData = (data?.glucoseObservations ?? [])
+    .flatMap((observation) => {
+      const value = Number.parseFloat(observation.value);
+      const sourceDate = observation.sourceDate || observation.createdAt;
+      const timestamp = Date.parse(sourceDate);
+      if (!Number.isFinite(value) || !Number.isFinite(timestamp) || timestamp < cutoff.getTime()) {
+        return [];
+      }
+      return [{ date: formatDate(sourceDate, locale), value, timestamp }];
+    })
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map(({ date, value }) => ({ date, value }));
+
+  const latestGlucose = chartData[chartData.length - 1];
+  const displayName = data?.user?.displayName || t("patientRole");
+  const reminderCount = data?.stats?.remindersCount ?? 0;
+
+  return (
+    <div className="min-h-screen bg-[#F7FAFC] text-[#142E4D] font-sans flex flex-col antialiased selection:bg-[#DDF5F1] selection:text-[#087F8C]">
+      {/* Top Application Header: 72px high */}
+      <header className="h-[72px] bg-white border-b border-[#E2EDF4] px-6 flex items-center justify-between sticky top-0 z-30">
+        {/* Left: Brand block aligned with 245px sidebar width */}
+        <div className="w-[235px] shrink-0 flex items-center">
+          <BrandLogo variant="header" href="/dashboard" />
+        </div>
+
+        {/* Center: Search input ~550px wide */}
+        <div className="flex-1 max-w-[560px] mx-6">
+          <form onSubmit={handleSearchSubmit} className="relative w-full">
+            <Search className="w-4 h-4 text-[#7B91A5] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={header("searchPlaceholder")}
+              className="w-full bg-[#F7FAFC] border border-[#E2EDF4] focus:border-[#087F8C] focus:bg-white focus:ring-1 focus:ring-[#087F8C] text-xs sm:text-sm text-[#142E4D] rounded-xl pl-9 pr-16 py-2.5 outline-hidden transition-all placeholder:text-[#7B91A5]"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#7B91A5] border border-[#E2EDF4] bg-white px-1.5 py-0.5 rounded font-medium">
+              Ctrl + K
+            </span>
+          </form>
+        </div>
+
+        {/* Right Section: Notifications, Language, Profile */}
+        <div className="flex items-center gap-4 shrink-0">
+          {/* Notification Bell with Badge */}
+          <button
+            type="button"
+            className="relative p-2 text-[#58718B] hover:text-[#142E4D] hover:bg-[#F7FAFC] rounded-xl transition-colors cursor-pointer"
+            title={header("notifications")}
+          >
+            <Bell className="w-5 h-5" />
+            {reminderCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#E03131] text-white text-[9px] font-bold flex items-center justify-center">
+                {reminderCount}
+              </span>
+            )}
+          </button>
+
+          {/* Language Selector Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E2EDF4] rounded-xl text-xs font-semibold text-[#142E4D] hover:bg-[#F7FAFC] transition-colors cursor-pointer"
+            >
+              <Globe className="w-3.5 h-3.5 text-[#58718B]" />
+              <span>{locale === "te" ? "తెలుగు" : locale === "hi" ? "हिन्दी" : "English"}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-[#7B91A5]" />
+            </button>
+
+            {langDropdownOpen && (
+              <div className="absolute right-0 mt-1 w-32 bg-white border border-[#E2EDF4] rounded-xl shadow-lg py-1 z-40 text-xs">
+                <button
+                  type="button"
+                  onClick={() => handleLanguageChange("en")}
+                  className={`w-full text-left px-3 py-2 hover:bg-[#F7FAFC] flex items-center justify-between ${
+                    locale === "en" ? "font-bold text-[#087F8C]" : "text-[#142E4D]"
+                  }`}
+                >
+                  English {locale === "en" && <Check className="w-3.5 h-3.5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleLanguageChange("te")}
+                  className={`w-full text-left px-3 py-2 hover:bg-[#F7FAFC] flex items-center justify-between ${
+                    locale === "te" ? "font-bold text-[#087F8C]" : "text-[#142E4D]"
+                  }`}
+                >
+                  తెలుగు {locale === "te" && <Check className="w-3.5 h-3.5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleLanguageChange("hi")}
+                  className={`w-full text-left px-3 py-2 hover:bg-[#F7FAFC] flex items-center justify-between ${
+                    locale === "hi" ? "font-bold text-[#087F8C]" : "text-[#142E4D]"
+                  }`}
+                >
+                  हिन्दी {locale === "hi" && <Check className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* User Profile Avatar with Online Badge */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-[#F7FAFC] transition-colors cursor-pointer"
+            >
+              <div className="relative">
+                <div className="w-9 h-9 rounded-full bg-[#17466B] text-white flex items-center justify-center text-xs font-bold ring-2 ring-[#087F8C]/20">
+                  {displayName.charAt(0)}
+                </div>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#28AD65] ring-2 ring-white absolute -bottom-0.5 -right-0.5" />
+              </div>
+              <div className="hidden lg:block text-left pr-1">
+                <p className="text-xs font-bold text-[#142E4D] leading-tight">{displayName}</p>
+                <p className="text-[10px] text-[#7B91A5] leading-tight">Patient</p>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-[#7B91A5] hidden lg:block" />
+            </button>
+
+            {profileDropdownOpen && (
+              <div className="absolute right-0 mt-1 w-48 bg-white border border-[#E2EDF4] rounded-xl shadow-lg py-1 z-40 text-xs">
+                <div className="px-3 py-2 border-b border-[#E2EDF4]">
+                  <p className="font-bold text-[#142E4D]">{displayName}</p>
+                  <p className="text-[10px] text-[#7B91A5] truncate">{data?.user?.email || "patient@ayuvsaathi.in"}</p>
+                </div>
+                <Link
+                  href="/settings"
+                  onClick={() => setProfileDropdownOpen(false)}
+                  className="w-full text-left px-3 py-2 hover:bg-[#F7FAFC] flex items-center gap-2 text-[#58718B] hover:text-[#142E4D]"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  Profile Settings
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 border-t border-[#E2EDF4]"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Container: Sidebar + Dashboard Content */}
+      <div className="flex-1 flex max-w-[1600px] w-full mx-auto">
+        {/* Left Sidebar: 245px fixed */}
+        <aside className="w-[245px] shrink-0 bg-white border-r border-[#E2EDF4] flex flex-col justify-between py-5 px-3 min-h-[calc(100vh-72px)] sticky top-[72px] self-start">
+          <nav className="space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
+                    item.active
+                      ? "bg-[#DDF5F1] text-[#087F8C]"
+                      : "text-[#58718B] hover:bg-[#F7FAFC] hover:text-[#142E4D]"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon
+                      className={`w-4 h-4 transition-colors ${
+                        item.active ? "text-[#087F8C]" : "text-[#7B91A5] group-hover:text-[#087F8C]"
+                      }`}
+                    />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge !== undefined && (
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        item.active ? "bg-[#087F8C] text-white" : "bg-[#E2EDF4] text-[#58718B]"
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* User ID card at bottom of sidebar matching screenshot */}
+          <div className="mt-6 pt-4 border-t border-[#E2EDF4]">
+            <div className="p-3 bg-[#F7FAFC] rounded-xl border border-[#E2EDF4] flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-[#17466B] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                {displayName.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-[#142E4D] truncate">{displayName}</p>
+                <p className="text-[10px] text-[#7B91A5] truncate">AYUV-984210</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Dashboard Canvas: Main Dashboard (885px) + Right Utility Column (352px) */}
+        <main className="flex-1 p-5 overflow-x-hidden">
+          <div className="flex flex-col xl:flex-row gap-5">
+            {/* Main Center Dashboard Column: ~885px */}
+            <div className="flex-1 max-w-full xl:max-w-[885px] space-y-4">
+              {/* 1. Welcome Banner Card */}
+              <div className="bg-gradient-to-r from-[#DDF5F1] via-[#E8F8F5] to-[#F0FAF7] border border-[#C5EDE3] rounded-2xl p-5 flex items-center justify-between relative overflow-hidden shadow-2xs">
+                <div className="max-w-[480px]">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/80 border border-teal-200 text-[#087F8C] text-[10px] font-bold uppercase tracking-wider mb-2">
+                    <Sparkles className="w-3 h-3 text-[#28AD65]" />
+                    {getIstGreeting()}
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-black text-[#142E4D] tracking-tight leading-tight">
+                    {t("welcomeBack", { name: displayName })}
+                  </h1>
+                  <p className="text-xs text-[#58718B] mt-1 leading-relaxed">
+                    {t("welcomeSubtitle")}
+                  </p>
+                </div>
+
+                <div className="hidden sm:flex flex-col items-end gap-2 shrink-0">
+                  <div className="text-right">
+                    <span className="text-xs font-bold text-[#087F8C] block leading-tight">
+                      {t("healthyMindTag")} ♡
+                    </span>
+                  </div>
+                  {/* Decorative Meditating Healthcare Figure */}
+                  <div className="w-20 h-20 rounded-full bg-white/70 border border-teal-200/60 flex items-center justify-center text-[#087F8C] relative shadow-2xs">
+                    <HeartPulse className="w-9 h-9 text-[#087F8C]" />
+                    <Sparkles className="w-3.5 h-3.5 text-[#28AD65] absolute top-1 right-2" />
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Four Summary Stat Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+                {/* Card 1: Lab Reports */}
+                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#E4F1FF] text-[#3186F6] flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-[#58718B] leading-tight">{t("statLabReports")}</p>
+                      <p className="text-xl font-bold text-[#142E4D] leading-tight mt-0.5">
+                        {data?.stats?.labReportsCount ?? 4}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/reports"
+                    className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1 self-start"
+                  >
+                    {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
+                  </Link>
+                </div>
+
+                {/* Card 2: Upcoming Reminders */}
+                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#D9F8E8] text-[#28AD65] flex items-center justify-center shrink-0">
+                      <Pill className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-[#58718B] leading-tight">{t("statReminders")}</p>
+                      <p className="text-xl font-bold text-[#142E4D] leading-tight mt-0.5">
+                        {data?.stats?.remindersCount ?? 2}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/reminders"
+                    className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1 self-start"
+                  >
+                    {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
+                  </Link>
+                </div>
+
+                {/* Card 3: Active Treatment Plans */}
+                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#F3E8FF] text-[#8B5CE8] flex items-center justify-center shrink-0">
+                      <ClipboardList className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-[#58718B] leading-tight">{t("statTreatmentPlans")}</p>
+                      <p className="text-xl font-bold text-[#142E4D] leading-tight mt-0.5">
+                        {data?.stats?.treatmentPlansCount ?? 0}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/doctor-summary"
+                    className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1 self-start"
+                  >
+                    {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
+                  </Link>
+                </div>
+
+                {/* Card 4: Medical Records */}
+                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#FFF0DC] text-[#F59A35] flex items-center justify-center shrink-0">
+                      <FolderHeart className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-[#58718B] leading-tight">{t("statMedicalRecords")}</p>
+                      <p className="text-xl font-bold text-[#142E4D] leading-tight mt-0.5">
+                        {data?.stats?.medicalRecordsCount ?? 8}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/timeline"
+                    className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1 self-start"
+                  >
+                    {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* 3. Mid Section: Health Trends Panel + Recent Activity Timeline */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+                {/* Health Trends Panel (7 Cols) */}
+                <div className="md:col-span-7 bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#E2EDF4]">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-[#087F8C]" />
+                      <div>
+                        <h3 className="text-xs font-bold text-[#142E4D]">{t("healthTrendsTitle")}</h3>
+                        <p className="text-[10px] text-[#7B91A5]">{t("healthTrendsSubtitle")}</p>
+                      </div>
+                    </div>
+                    <select
+                      value={dateRange}
+                      onChange={(e) => setDateRange(e.target.value as "3" | "6" | "12")}
+                      className="text-[10px] font-semibold text-[#58718B] border border-[#E2EDF4] bg-[#F7FAFC] rounded-lg px-2 py-1 outline-hidden cursor-pointer"
+                    >
+                      <option value="3">{t("timeLast3Months")}</option>
+                      <option value="6">{t("timeLast6Months")}</option>
+                      <option value="12">{t("timeLastYear")}</option>
+                    </select>
+                  </div>
+
+                  {chartData.length > 0 ? (
+                    <>
+                      <div className="mt-3 flex items-start justify-between">
+                        <div>
+                          <span className="text-[11px] font-bold text-[#142E4D]">{t("bloodGlucoseLabel")}</span>
+                          <div className="flex items-center gap-3 mt-1 text-[9px] text-[#58718B]">
+                            <span className="flex items-center gap-1">
+                              <span className="w-2.5 h-0.5 bg-[#087F8C] inline-block rounded"></span> {t("yourValue")}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="bg-[#F7FAFC] border border-[#E2EDF4] rounded-xl p-2.5 text-center min-w-[120px]">
+                          <span className="text-[9px] text-[#7B91A5] font-semibold block uppercase">{t("latestValue")}</span>
+                          <div className="text-lg font-extrabold text-[#142E4D] leading-tight mt-0.5">
+                            {latestGlucose?.value} <span className="text-xs font-medium text-[#58718B]">mg/dL</span>
+                          </div>
+                          <span className="text-[9px] text-[#7B91A5] block mt-0.5">{latestGlucose?.date}</span>
+                        </div>
+                      </div>
+
+                      <div className="w-full h-36 mt-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E6EEF4" vertical={false} />
+                            <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#7B91A5" }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 9, fill: "#7B91A5" }} axisLine={false} tickLine={false} />
+                            <Tooltip
+                              contentStyle={{ backgroundColor: "#ffffff", borderRadius: "8px", border: "1px solid #E2EDF4", fontSize: "11px" }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#087F8C"
+                              strokeWidth={2.5}
+                              dot={{ r: 3.5, fill: "#087F8C", stroke: "#ffffff", strokeWidth: 1.5 }}
+                              activeDot={{ r: 5 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="py-10 text-center text-xs text-[#7B91A5]">
+                      {loading ? common("loading") : t("noVerifiedData")}
+                    </p>
+                  )}
+                </div>
+
+                {/* Recent Activity Timeline (5 Cols) */}
+                <div className="md:col-span-5 bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#E2EDF4]">
+                    <h3 className="text-xs font-bold text-[#142E4D]">{t("recentActivityTitle")}</h3>
+                    <Link href="/timeline" className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1">
+                      {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
+                    </Link>
+                  </div>
+
+                  <div className="mt-2.5 space-y-3 relative pl-3 border-l-2 border-[#E2EDF4] ml-2">
+                    {dynamicActivities.length > 0 ? dynamicActivities.map((act) => (
+                      <div key={act.id} className="relative group">
+                        <span className={`w-2 h-2 rounded-full ${act.color} absolute -left-[17px] top-1 ring-4 ring-white`} />
+                        <div className="flex items-start justify-between">
+                          <p className="text-[11px] font-bold text-[#142E4D] leading-tight">{act.title}</p>
+                          <span className="text-[9px] text-[#7B91A5] font-medium">{act.time}</span>
+                        </div>
+                        <p className="text-[10px] text-[#58718B] mt-0.5 leading-snug">{act.desc}</p>
+                      </div>
+                    )) : (
+                      <p className="py-4 text-xs text-[#7B91A5]">{loading ? common("loading") : t("noVerifiedData")}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Lower Cards: Recent Lab Reports (6 Cols) + Active Treatment Plans (6 Cols) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {/* Recent Lab Reports Card */}
+                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#087F8C]" />
+                      <h3 className="text-xs font-bold text-[#142E4D]">{t("recentLabReportsTable")}</h3>
+                    </div>
+                    <Link href="/reports" className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1">
+                      {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
+                    </Link>
+                  </div>
+
+                  <div className="mt-2.5 space-y-2">
+                    {dynamicLabReports.length > 0 ? dynamicLabReports.map((report) => (
+                      <Link
+                        key={report.id}
+                        href={`/reports/${report.id}`}
+                        className="p-2.5 rounded-xl border border-[#E2EDF4] bg-[#F7FAFC] flex items-center justify-between hover:bg-white hover:border-[#087F8C]/30 transition-colors block"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-[#E4F1FF] text-[#3186F6] flex items-center justify-center shrink-0">
+                            <FileText className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-bold text-[#142E4D] leading-tight">{report.name}</p>
+                            <p className="text-[9px] text-[#7B91A5]">{report.date} · {report.source}</p>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 bg-[#D9F8E8] text-[#1E824C] text-[9px] font-bold rounded-full">
+                          ✓ {t("statusProcessed")}
+                        </span>
+                      </Link>
+                    )) : (
+                      <p className="py-4 text-xs text-[#7B91A5]">{loading ? common("loading") : t("noVerifiedData")}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Active Treatment Plans Card */}
+                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+                      <div className="flex items-center gap-2">
+                        <ClipboardList className="w-4 h-4 text-[#087F8C]" />
+                        <h3 className="text-xs font-bold text-[#142E4D]">{t("activeTreatmentPlansTable")}</h3>
+                      </div>
+                      <Link href="/doctor-summary" className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1">
+                        {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
+                      </Link>
+                    </div>
+
+                    <div className="mt-3">
+                      <p className="py-4 text-xs text-[#7B91A5]">
+                        {loading ? common("loading") : t("noVerifiedData")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Link
+                    href="/doctor-summary"
+                    className="mt-3 w-full py-1.5 px-3 rounded-xl border border-[#E2EDF4] hover:bg-[#F7FAFC] text-[11px] font-bold text-[#087F8C] flex items-center justify-center gap-1 transition-colors"
+                  >
+                    {t("viewDetails")} <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* 5. Lower Row: Recent Medical Records Card with Accurate Routing */}
+              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+                  <div className="flex items-center gap-2">
+                    <FolderHeart className="w-4 h-4 text-[#087F8C]" />
+                    <h3 className="text-xs font-bold text-[#142E4D]">{t("recentMedicalRecordsTable")}</h3>
+                  </div>
+                  <Link href="/timeline" className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1">
+                    {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
+                  </Link>
+                </div>
+
+                <div className="mt-2.5 grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {dynamicMedicalRecords.length > 0 ? dynamicMedicalRecords.map((rec) => (
+                    <Link
+                      key={rec.key}
+                      href={rec.href}
+                      className="p-2.5 rounded-xl border border-[#E2EDF4] bg-[#F7FAFC] flex items-center justify-between hover:bg-white hover:border-[#087F8C]/30 transition-all group"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-[#DDF5F1] text-[#087F8C] flex items-center justify-center shrink-0">
+                          <FileText className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-[#142E4D] leading-tight group-hover:text-[#087F8C] transition-colors">
+                            {rec.title}
+                          </p>
+                          <p className="text-[9px] text-[#7B91A5]">{rec.date}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-[#7B91A5] group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+                  )) : (
+                    <p className="py-4 text-xs text-[#7B91A5]">{loading ? common("loading") : t("noVerifiedData")}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Utility Column: ~352px */}
+            <div className="w-full xl:w-[352px] space-y-4 shrink-0">
+              {/* 1. Medicine Reminders (~260px) */}
+              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-[#087F8C]" />
+                    <h3 className="text-xs font-bold text-[#142E4D]">{t("medicineRemindersTitle")}</h3>
+                  </div>
+                  <Link href="/reminders" className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1">
+                    {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
+                  </Link>
+                </div>
+
+                <div className="mt-3 space-y-2.5">
+                  {dynamicReminders.length > 0 ? dynamicReminders.map((med) => (
+                    <div
+                      key={med.id}
+                      className="p-2.5 rounded-xl border border-[#E2EDF4] bg-[#F7FAFC] flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-8 h-8 rounded-lg ${med.iconBg} flex items-center justify-center shrink-0 font-bold`}>
+                          <Pill className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-[#142E4D] leading-tight">{med.name}</p>
+                          <p className="text-[10px] text-[#7B91A5] mt-0.5">{med.instruction}</p>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 ${med.badgeColor} text-[10px] font-bold rounded-full`}>
+                        {med.status}
+                      </span>
+                    </div>
+                  )) : (
+                    <p className="py-4 text-xs text-[#7B91A5]">{loading ? common("loading") : t("noVerifiedData")}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* 2. Prominent Teal AI Health Assistant Card */}
+              <div className="bg-gradient-to-br from-[#087F8C] to-[#07545B] rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white shrink-0">
+                    <Bot className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">{t("aiAssistantCardTitle")}</h3>
+                    <p className="text-[10px] text-teal-100 mt-0.5 leading-snug">
+                      {t("aiAssistantCardDesc")}
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  href="/assistant"
+                  className="mt-4 w-full py-2.5 px-4 rounded-xl bg-white hover:bg-teal-50 text-[#087F8C] text-xs font-bold shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  {t("startConversation")} <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+
+                {/* Suggested prompt chips matching reference image */}
+                <div className="mt-3.5 grid grid-cols-2 gap-2 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => handlePromptClick(t("chipExplainReport"))}
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 transition-colors cursor-pointer"
+                  >
+                    {t("chipExplainReport")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePromptClick(t("chipSummarizeRecords"))}
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 transition-colors cursor-pointer"
+                  >
+                    {t("chipSummarizeRecords")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePromptClick(t("chipWhatMeans"))}
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 transition-colors cursor-pointer"
+                  >
+                    {t("chipWhatMeans")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePromptClick(t("chipDoctorQuestions"))}
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 transition-colors cursor-pointer"
+                  >
+                    {t("chipDoctorQuestions")}
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. Quick Actions 2x2 Grid */}
+              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs">
+                <div className="flex items-center gap-2 pb-2.5 border-b border-[#E2EDF4]">
+                  <Zap className="w-4 h-4 text-[#087F8C]" />
+                  <h3 className="text-xs font-bold text-[#142E4D]">{t("quickActionsTitle")}</h3>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2.5">
+                  <Link
+                    href="/reports"
+                    className="p-3 bg-[#F7FAFC] border border-[#E2EDF4] hover:border-[#087F8C]/40 hover:bg-white rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[#E4F1FF] text-[#087F8C] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Upload className="w-4 h-4" />
+                    </div>
+                    <span className="text-[11px] font-bold text-[#142E4D] text-center leading-tight">
+                      {t("qaUploadReport")}
+                    </span>
+                  </Link>
+
+                  <Link
+                    href="/prescriptions"
+                    className="p-3 bg-[#F7FAFC] border border-[#E2EDF4] hover:border-[#087F8C]/40 hover:bg-white rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[#DDF5F1] text-[#087F8C] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Pill className="w-4 h-4" />
+                    </div>
+                    <span className="text-[11px] font-bold text-[#142E4D] text-center leading-tight">
+                      {t("qaAddPrescription")}
+                    </span>
+                  </Link>
+
+                  <Link
+                    href="/find-care"
+                    className="p-3 bg-[#F7FAFC] border border-[#E2EDF4] hover:border-[#087F8C]/40 hover:bg-white rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[#FFF0DC] text-[#F59A35] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <span className="text-[11px] font-bold text-[#142E4D] text-center leading-tight">
+                      {t("qaFindNearbyCare")}
+                    </span>
+                  </Link>
+
+                  <Link
+                    href="/analytics"
+                    className="p-3 bg-[#F7FAFC] border border-[#E2EDF4] hover:border-[#087F8C]/40 hover:bg-white rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[#F3E8FF] text-[#8B5CE8] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <BarChart3 className="w-4 h-4" />
+                    </div>
+                    <span className="text-[11px] font-bold text-[#142E4D] text-center leading-tight">
+                      {t("viewAnalytics")}
+                    </span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Discreet Footer */}
+          <footer className="mt-8 pt-4 border-t border-[#E2EDF4] flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#7B91A5] gap-2 pb-6">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[#087F8C]">AyuvSaathi</span>
+              <span>|</span>
+              <span>{common("tagline")}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#28AD65]" />
+              <span>{t("dataSafe")}</span>
+              <Activity className="w-4 h-4 text-[#087F8C] ml-1" />
+            </div>
+          </footer>
+        </main>
+      </div>
+    </div>
+  );
+}
