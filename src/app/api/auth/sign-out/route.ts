@@ -1,6 +1,10 @@
 import { clearSession } from "@/lib/auth/session";
 
 export async function POST() {
-  await clearSession();
-  return Response.json({ ok: true });
+  const cookieHeader = await clearSession();
+  const response = Response.json({ ok: true });
+  if (cookieHeader) {
+    response.headers.set("set-cookie", cookieHeader);
+  }
+  return response;
 }

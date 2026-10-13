@@ -6,6 +6,7 @@ import { nowIso } from "@/lib/utils";
 import { routing } from "@/i18n/routing";
 import { isAiConfigured } from "@/lib/env";
 import { assistantReply } from "@/lib/ai/provider";
+import { groundedAnswer } from "@/lib/ai/grounded";
 
 const chatSchema = z.object({
   conversationId: z.string().uuid().optional(),
@@ -19,12 +20,6 @@ export async function POST(request: NextRequest) {
 
   const parsed = chatSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return jsonError("Please enter a question.", 400);
-  if (!isAiConfigured()) {
-    return jsonError(
-      "The AI assistant is not configured. Set AI_API_KEY on the server and try again.",
-      503
-    );
-  }
 
   const [observations, medications] = await Promise.all([
     store.listObservations(auth.user.id),
@@ -57,20 +52,30 @@ export async function POST(request: NextRequest) {
     content: m.content,
   }));
 
-  let res: Awaited<ReturnType<typeof assistantReply>>;
-  try {
-    res = await assistantReply({
-      language: parsed.data.language,
-      question: parsed.data.message,
-      history: history.slice(-10),
-      records: recordsSummary,
-    });
-  } catch (error) {
-    console.error("[Assistant Chat] AI request failed:", error);
-    return jsonError(
-      "The AI assistant could not generate a response. Check the AI provider configuration and try again.",
-      502
-    );
+  let replyText = "";
+  let caution = "Grounded strictly in your confirmed lab records and medications.";
+  let usedRecordIds: string[] = [];
+
+  if (isAiConfigured()) {
+    try {
+      const res = await assistantReply({
+        language: parsed.data.language || "en",
+        question: parsed.data.message,
+        history: history.slice(-10),
+        records: recordsSummary,
+      });
+      replyText = res.reply;
+      caution = res.caution ? "Clinical caution: Strictly informational, verify with clinician." : "";
+      usedRecordIds = res.usedRecordIds;
+    } catch (error) {
+      console.error("[Assistant Chat] AI request failed, falling back to grounded:", error);
+      replyText = groundedAnswer(parsed.data.message, confirmedObs, "en");
+      caution = "Answer generated using local grounded records analysis.";
+    }
+  } else {
+    // Deterministic grounded response in English
+    replyText = groundedAnswer(parsed.data.message, confirmedObs, "en");
+    caution = "AI provider is not configured. Answer is synthesized from confirmed lab values.";
   }
 
   if (!parsed.data.conversationId) {
@@ -100,14 +105,14 @@ export async function POST(request: NextRequest) {
     conversationId,
     ownerId: auth.user.id,
     role: "assistant",
-    content: res.reply,
-    sourceRefs: res.usedRecordIds,
+    content: replyText,
+    sourceRefs: usedRecordIds,
     createdAt: assistantNow,
   });
 
   return Response.json({
     conversationId,
     message: assistantMsg,
-    caution: res.caution ? "Clinical caution: Strictly informational, verify with clinician." : "",
+    caution,
   });
 }

@@ -12,7 +12,7 @@ export async function withUser(request: NextRequest): Promise<
   { user: Profile; ip: string } | { response: Response }
 > {
   try {
-    const user = await requireUser();
+    const user = await requireUser(request);
     return { user, ip: clientIp(request.headers) };
   } catch {
     return { response: await jsonError("Please sign in to continue.", 401) };

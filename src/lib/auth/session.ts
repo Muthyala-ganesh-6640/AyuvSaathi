@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { NextRequest } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
@@ -32,39 +33,83 @@ async function secretKey() {
   }
 }
 
-export async function createSession(userId: string) {
+export function isSecureContext(): boolean {
+  return (
+    process.env.COOKIE_SECURE === "true" ||
+    (process.env.NEXT_PUBLIC_APP_URL || "").startsWith("https://") ||
+    process.env.NODE_ENV === "production" ||
+    Boolean(process.env.VERCEL)
+  );
+}
+
+export async function createSession(userId: string): Promise<{ token: string; cookieHeader: string }> {
   const token = await new SignJWT({ sub: userId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
     .sign(await secretKey());
-  const jar = await cookies();
-  const isHttps =
-    process.env.COOKIE_SECURE === "true" ||
-    (process.env.NEXT_PUBLIC_APP_URL || "").startsWith("https://");
-  jar.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isHttps,
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
+  const secure = isSecureContext();
+  const maxAge = 60 * 60 * 24 * 7;
+  const cookieHeader = `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}; Max-Age=${maxAge}`;
+
+  try {
+    const jar = await cookies();
+    jar.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure,
+      path: "/",
+      maxAge,
+    });
+  } catch {
+    // cookies() may throw outside Next.js request store context (e.g. tests)
+  }
+
+  return { token, cookieHeader };
 }
 
-export async function clearSession() {
-  const jar = await cookies();
-  jar.set(SESSION_COOKIE, "", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: false,
-    path: "/",
-    maxAge: 0,
-  });
+export async function clearSession(): Promise<string> {
+  const secure = isSecureContext();
+  const cookieHeader = `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}; Max-Age=0`;
+
+  try {
+    const jar = await cookies();
+    jar.set(SESSION_COOKIE, "", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure,
+      path: "/",
+      maxAge: 0,
+    });
+  } catch {
+    // cookies() may throw outside Next.js request store context
+  }
+
+  return cookieHeader;
 }
 
-export async function readSessionUserId() {
-  const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
+export async function readSessionUserId(request?: NextRequest) {
+  let token: string | undefined;
+
+  if (request) {
+    token = request.cookies.get(SESSION_COOKIE)?.value;
+    if (!token) {
+      const authHeader = request.headers.get("authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.slice(7).trim();
+      }
+    }
+  }
+
+  if (!token) {
+    try {
+      const jar = await cookies();
+      token = jar.get(SESSION_COOKIE)?.value;
+    } catch {
+      // outside request store context
+    }
+  }
+
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, await secretKey());
@@ -74,8 +119,8 @@ export async function readSessionUserId() {
   }
 }
 
-export async function requireUser(): Promise<Profile> {
-  const id = await readSessionUserId();
+export async function requireUser(request?: NextRequest): Promise<Profile> {
+  const id = await readSessionUserId(request);
   if (!id) {
     const error = new Error("UNAUTHENTICATED");
     throw error;
