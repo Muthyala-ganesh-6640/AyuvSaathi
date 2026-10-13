@@ -4,10 +4,12 @@ import { promises as fs } from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
 import { getEnv } from "@/lib/env";
-import { store } from "@/lib/db/file-store";
+import { getDataDir, store } from "@/lib/db/file-store";
 import type { Profile } from "@/lib/db/types";
 
 export const SESSION_COOKIE = "arogya_session";
+
+let fallbackInMemorySecret: string | null = null;
 
 async function secretKey() {
   const env = getEnv();
@@ -15,16 +17,18 @@ async function secretKey() {
   if (secret && secret.length >= 16) {
     return new TextEncoder().encode(secret);
   }
-  const dir = path.join(process.cwd(), ".data");
+  const dir = getDataDir();
   const file = path.join(dir, "auth-secret");
-  await fs.mkdir(dir, { recursive: true });
   try {
+    await fs.mkdir(dir, { recursive: true });
     const existing = await fs.readFile(file, "utf8");
     return new TextEncoder().encode(existing.trim());
   } catch {
-    const generated = randomBytes(32).toString("hex");
-    await fs.writeFile(file, generated, "utf8");
-    return new TextEncoder().encode(generated);
+    if (!fallbackInMemorySecret) {
+      fallbackInMemorySecret = randomBytes(32).toString("hex");
+      await fs.writeFile(file, fallbackInMemorySecret, "utf8").catch(() => undefined);
+    }
+    return new TextEncoder().encode(fallbackInMemorySecret);
   }
 }
 

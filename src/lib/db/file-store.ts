@@ -1,6 +1,7 @@
 import { randomBytes, createHash } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import os from "os";
 import {
   Appointment,
   ChatMessage,
@@ -19,9 +20,36 @@ import {
   emptyDatabase,
 } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const STORE_FILE = path.join(DATA_DIR, "store.json");
-const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
+let activeDataDir: string | null = null;
+
+export function getDataDir(): string {
+  if (activeDataDir) return activeDataDir;
+  if (process.env.DATA_DIR) {
+    activeDataDir = process.env.DATA_DIR;
+    return activeDataDir;
+  }
+  // On Vercel, AWS Lambda, or serverless environments, process.cwd() is read-only (/var/task).
+  // os.tmpdir() (/tmp) is the only writable directory.
+  if (
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.LAMBDA_TASK_ROOT ||
+    (process.env.NODE_ENV === "production" && process.platform !== "win32")
+  ) {
+    activeDataDir = path.join(os.tmpdir(), "ayuvsaathi-data");
+    return activeDataDir;
+  }
+  activeDataDir = path.join(process.cwd(), ".data");
+  return activeDataDir;
+}
+
+export function getStoreFile(): string {
+  return path.join(getDataDir(), "store.json");
+}
+
+export function getUploadDir(): string {
+  return path.join(getDataDir(), "uploads");
+}
 
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -35,17 +63,46 @@ function withLock<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 async function ensureDirs() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
+  const dataDir = getDataDir();
+  const uploadDir = getUploadDir();
+  try {
+    await fs.mkdir(dataDir, { recursive: true });
+    await fs.mkdir(uploadDir, { recursive: true });
+  } catch (error) {
+    // If mkdir fails because process.cwd() or the path is read-only (EROFS / ENOENT / EACCES)
+    const tmpDataDir = path.join(os.tmpdir(), "ayuvsaathi-data");
+    if (dataDir !== tmpDataDir) {
+      activeDataDir = tmpDataDir;
+      await fs.mkdir(activeDataDir, { recursive: true });
+      await fs.mkdir(path.join(activeDataDir, "uploads"), { recursive: true });
+      return;
+    }
+    throw error;
+  }
 }
 
 async function readDb(): Promise<DatabaseShape> {
   await ensureDirs();
+  const storeFile = getStoreFile();
   try {
-    const raw = await fs.readFile(STORE_FILE, "utf8");
+    const raw = await fs.readFile(storeFile, "utf8");
     const parsed = JSON.parse(raw) as DatabaseShape;
     return { ...emptyDatabase(), ...parsed };
   } catch (error) {
+    // If not found in primary store, check if there's a pre-bundled store.json in process.cwd()/.data
+    const seedStoreFile = path.join(process.cwd(), ".data", "store.json");
+    if (storeFile !== seedStoreFile) {
+      try {
+        const seedRaw = await fs.readFile(seedStoreFile, "utf8");
+        const seedParsed = JSON.parse(seedRaw) as DatabaseShape;
+        const initial = { ...emptyDatabase(), ...seedParsed };
+        await writeDb(initial).catch(() => undefined);
+        return initial;
+      } catch {
+        // No seed file available, proceed
+      }
+    }
+
     if (
       error !== null &&
       typeof error === "object" &&
@@ -60,9 +117,10 @@ async function readDb(): Promise<DatabaseShape> {
 
 async function writeDb(db: DatabaseShape) {
   await ensureDirs();
-  const tmp = `${STORE_FILE}.${randomBytes(6).toString("hex")}.tmp`;
+  const storeFile = getStoreFile();
+  const tmp = `${storeFile}.${randomBytes(6).toString("hex")}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf8");
-  await fs.rename(tmp, STORE_FILE);
+  await fs.rename(tmp, storeFile);
 }
 
 export async function mutate<T>(fn: (db: DatabaseShape) => T | Promise<T>): Promise<T> {
@@ -82,16 +140,19 @@ export async function query<T>(fn: (db: DatabaseShape) => T | Promise<T>): Promi
 }
 
 export async function saveUpload(ownerId: string, id: string, buffer: Buffer, ext: string) {
-  const dir = path.join(UPLOAD_DIR, ownerId);
+  await ensureDirs();
+  const uploadDir = getUploadDir();
+  const dir = path.join(uploadDir, ownerId);
   await fs.mkdir(dir, { recursive: true });
   const storagePath = path.join(ownerId, `${id}${ext}`);
-  await fs.writeFile(path.join(UPLOAD_DIR, storagePath), buffer);
+  await fs.writeFile(path.join(uploadDir, storagePath), buffer);
   return storagePath;
 }
 
 export async function readUpload(storagePath: string) {
-  const resolved = path.resolve(UPLOAD_DIR, storagePath);
-  const relative = path.relative(path.resolve(UPLOAD_DIR), resolved);
+  const uploadDir = getUploadDir();
+  const resolved = path.resolve(uploadDir, storagePath);
+  const relative = path.relative(path.resolve(uploadDir), resolved);
   if (
     !relative ||
     relative === ".." ||
@@ -100,12 +161,26 @@ export async function readUpload(storagePath: string) {
   ) {
     throw new Error("Invalid storage path");
   }
-  return fs.readFile(resolved);
+  try {
+    return await fs.readFile(resolved);
+  } catch (error) {
+    const seedUploadDir = path.join(process.cwd(), ".data", "uploads");
+    if (uploadDir !== seedUploadDir) {
+      try {
+        const seedResolved = path.resolve(seedUploadDir, storagePath);
+        return await fs.readFile(seedResolved);
+      } catch {
+        // ignore
+      }
+    }
+    throw error;
+  }
 }
 
 export async function deleteUpload(storagePath: string) {
-  const resolved = path.resolve(UPLOAD_DIR, storagePath);
-  const relative = path.relative(path.resolve(UPLOAD_DIR), resolved);
+  const uploadDir = getUploadDir();
+  const resolved = path.resolve(uploadDir, storagePath);
+  const relative = path.relative(path.resolve(uploadDir), resolved);
   if (
     !relative ||
     relative === ".." ||
