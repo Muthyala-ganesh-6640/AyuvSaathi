@@ -6,7 +6,7 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { getEnv } from "@/lib/env";
 import { getDataDir, store } from "@/lib/db/file-store";
-import type { Profile } from "@/lib/db/types";
+import type { Profile, Locale } from "@/lib/db/types";
 
 export const SESSION_COOKIE = "arogya_session";
 
@@ -34,6 +34,7 @@ async function secretKey() {
 }
 
 export function isSecureContext(): boolean {
+  if (process.env.COOKIE_SECURE === "false") return false;
   return (
     process.env.COOKIE_SECURE === "true" ||
     (process.env.NEXT_PUBLIC_APP_URL || "").startsWith("https://") ||
@@ -42,8 +43,38 @@ export function isSecureContext(): boolean {
   );
 }
 
-export async function createSession(userId: string): Promise<{ token: string; cookieHeader: string }> {
-  const token = await new SignJWT({ sub: userId })
+/**
+ * Create a self-contained JWT session that embeds essential profile data.
+ * This ensures the session survives Vercel serverless cold starts where
+ * the ephemeral /tmp file store is lost between invocations.
+ */
+export async function createSession(userOrId: Profile | string): Promise<{ token: string; cookieHeader: string }> {
+  let profile: Profile | null = null;
+  if (typeof userOrId === "string") {
+    try {
+      profile = await store.getProfile(userOrId);
+    } catch {
+      profile = null;
+    }
+  } else {
+    profile = userOrId;
+  }
+
+  const sub = typeof userOrId === "string" ? userOrId : userOrId.id;
+  const claims: Record<string, unknown> = { sub };
+  if (profile) {
+    claims.email = profile.email;
+    claims.displayName = profile.displayName;
+    claims.interfaceLanguage = profile.interfaceLanguage || "en";
+    claims.aiLanguage = profile.aiLanguage || "en";
+    claims.timezone = profile.timezone || "Asia/Kolkata";
+    claims.notifyReminders = profile.notifyReminders ?? true;
+    claims.onboardingComplete = profile.onboardingComplete ?? false;
+    claims.emailVerified = profile.emailVerified ?? false;
+    claims.createdAt = profile.createdAt;
+  }
+
+  const token = await new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
@@ -88,7 +119,21 @@ export async function clearSession(): Promise<string> {
   return cookieHeader;
 }
 
-export async function readSessionUserId(request?: NextRequest) {
+/** Decoded JWT payload with embedded profile data */
+interface SessionPayload {
+  sub: string;
+  email?: string;
+  displayName?: string;
+  interfaceLanguage?: string;
+  aiLanguage?: string;
+  timezone?: string;
+  notifyReminders?: boolean;
+  onboardingComplete?: boolean;
+  emailVerified?: boolean;
+  createdAt?: string;
+}
+
+async function readSessionPayload(request?: NextRequest): Promise<SessionPayload | null> {
   let token: string | undefined;
 
   if (request) {
@@ -113,23 +158,61 @@ export async function readSessionUserId(request?: NextRequest) {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, await secretKey());
-    return typeof payload.sub === "string" ? payload.sub : null;
+    if (typeof payload.sub !== "string") return null;
+    return payload as unknown as SessionPayload;
   } catch {
     return null;
   }
 }
 
+export async function readSessionUserId(request?: NextRequest) {
+  const payload = await readSessionPayload(request);
+  return payload?.sub ?? null;
+}
+
+/**
+ * Require an authenticated user. First tries the file store for full profile
+ * data; if unavailable (serverless cold start), reconstructs a usable profile
+ * from the self-contained JWT and re-persists it to the store.
+ */
 export async function requireUser(request?: NextRequest): Promise<Profile> {
-  const id = await readSessionUserId(request);
-  if (!id) {
-    const error = new Error("UNAUTHENTICATED");
-    throw error;
-  }
-  const profile = await store.getProfile(id);
-  if (!profile) {
+  const payload = await readSessionPayload(request);
+  if (!payload || !payload.sub) {
     throw new Error("UNAUTHENTICATED");
   }
-  return profile;
+
+  // Try file store first for full profile (including passwordHash)
+  try {
+    const profile = await store.getProfile(payload.sub);
+    if (profile) return profile;
+  } catch {
+    // Store read failed — likely cold start, fall through
+  }
+
+  const email = payload.email || `user-${payload.sub.slice(0, 8)}@ayuvsaathi.in`;
+  const reconstructed: Profile = {
+    id: payload.sub,
+    email,
+    passwordHash: "",
+    displayName: payload.displayName || email.split("@")[0],
+    interfaceLanguage: (payload.interfaceLanguage || "en") as Locale,
+    aiLanguage: (payload.aiLanguage || "en") as Locale,
+    timezone: payload.timezone || "Asia/Kolkata",
+    notifyReminders: payload.notifyReminders ?? true,
+    onboardingComplete: payload.onboardingComplete ?? false,
+    emailVerified: payload.emailVerified ?? false,
+    createdAt: payload.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  // Persist to store so subsequent requests on same instance are fast
+  try {
+    await store.upsertProfile(reconstructed);
+  } catch {
+    // Ignore write failures — the reconstructed profile is still usable
+  }
+
+  return reconstructed;
 }
 
 export function publicProfile(profile: Profile) {

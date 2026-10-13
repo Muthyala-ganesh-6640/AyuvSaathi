@@ -9,6 +9,7 @@ import { GET as getObservations } from "@/app/api/observations/route";
 import { GET as getMedications } from "@/app/api/medications/route";
 import { GET as getTimeline, POST as addTimeline } from "@/app/api/timeline/route";
 import { POST as assistantChat } from "@/app/api/assistant/chat/route";
+import { mutate } from "@/lib/db/file-store";
 import { NextRequest } from "next/server";
 
 describe("Complete Architectural API Flow Integration", () => {
@@ -65,6 +66,11 @@ describe("Complete Architectural API Flow Integration", () => {
     const data = await res.json();
     expect(data.ok).toBe(true);
     expect(data.language).toBe("en");
+
+    const setCookie = res.headers.get("set-cookie");
+    if (setCookie) {
+      sessionCookie = setCookie.split(";")[0];
+    }
   });
 
   it("3. Authenticated session /api/me: returns user profile data", async () => {
@@ -73,6 +79,20 @@ describe("Complete Architectural API Flow Integration", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.user).toBeDefined();
+    expect(data.user.email).toBe(testEmail.toLowerCase());
+    expect(data.user.displayName).toBe("Flow Test User");
+  });
+
+  it("3b. Serverless cold-start resilience: session cookie remains authenticated even if local store loses the user profile", async () => {
+    // Simulate a fresh Vercel serverless function container where the user profile is not yet in /tmp store.json
+    await mutate((db) => {
+      db.profiles = db.profiles.filter((p) => p.email.toLowerCase() !== testEmail.toLowerCase());
+    });
+
+    const req = createRequest("/api/me", "GET", undefined, sessionCookie);
+    const res = await getMe(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
     expect(data.user.email).toBe(testEmail.toLowerCase());
     expect(data.user.displayName).toBe("Flow Test User");
   });

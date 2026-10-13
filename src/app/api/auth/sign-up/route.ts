@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     createdAt: created,
     updatedAt: created,
   });
-  const { cookieHeader } = await createSession(profile.id);
+  const { cookieHeader } = await createSession(profile);
   const response = Response.json({ ok: true, language: profile.interfaceLanguage });
   if (cookieHeader) {
     response.headers.set("set-cookie", cookieHeader);

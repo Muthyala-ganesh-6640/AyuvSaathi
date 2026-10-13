@@ -81,21 +81,37 @@ async function ensureDirs() {
   }
 }
 
+function mergeWithDefaults(parsed: Partial<DatabaseShape>): DatabaseShape {
+  const base = emptyDatabase();
+  const merged: DatabaseShape = { ...base, ...parsed };
+  const byEmail = new Map<string, Profile>();
+  for (const p of base.profiles) {
+    byEmail.set(p.email.toLowerCase(), p);
+  }
+  if (Array.isArray(parsed.profiles)) {
+    for (const p of parsed.profiles) {
+      byEmail.set(p.email.toLowerCase(), p);
+    }
+  }
+  merged.profiles = Array.from(byEmail.values());
+  return merged;
+}
+
 async function readDb(): Promise<DatabaseShape> {
   await ensureDirs();
   const storeFile = getStoreFile();
   try {
     const raw = await fs.readFile(storeFile, "utf8");
-    const parsed = JSON.parse(raw) as DatabaseShape;
-    return { ...emptyDatabase(), ...parsed };
+    const parsed = JSON.parse(raw) as Partial<DatabaseShape>;
+    return mergeWithDefaults(parsed);
   } catch (error) {
     // If not found in primary store, check if there's a pre-bundled store.json in process.cwd()/.data
     const seedStoreFile = path.join(process.cwd(), ".data", "store.json");
     if (storeFile !== seedStoreFile) {
       try {
         const seedRaw = await fs.readFile(seedStoreFile, "utf8");
-        const seedParsed = JSON.parse(seedRaw) as DatabaseShape;
-        const initial = { ...emptyDatabase(), ...seedParsed };
+        const seedParsed = JSON.parse(seedRaw) as Partial<DatabaseShape>;
+        const initial = mergeWithDefaults(seedParsed);
         await writeDb(initial).catch(() => undefined);
         return initial;
       } catch {

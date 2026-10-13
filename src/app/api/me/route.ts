@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { store } from "@/lib/db/file-store";
 import { jsonError, withUser } from "@/lib/api";
-import { publicProfile } from "@/lib/auth/session";
+import { createSession, publicProfile } from "@/lib/auth/session";
 import { nowIso } from "@/lib/utils";
 import { serviceStatus } from "@/lib/env";
 
@@ -31,5 +31,10 @@ export async function PATCH(request: NextRequest) {
     ...parsed.data,
     updatedAt: nowIso(),
   });
-  return Response.json({ user: publicProfile(updated) });
+  const { cookieHeader } = await createSession(updated);
+  const response = Response.json({ user: publicProfile(updated) });
+  if (cookieHeader) {
+    response.headers.set("set-cookie", cookieHeader);
+  }
+  return response;
 }

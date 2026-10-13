@@ -1,6 +1,6 @@
 import os
 import re
-import fitz  # PyMuPDF
+import pymupdf  # PyMuPDF (fitz API is deprecated)
 from PIL import Image
 import numpy as np
 import cv2
@@ -11,7 +11,7 @@ class OCRService:
     def extract_text_from_pdf(file_path: str) -> str:
         text_content = []
         try:
-            doc = fitz.open(file_path)
+            doc = pymupdf.open(file_path)
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 text = page.get_text("text")
