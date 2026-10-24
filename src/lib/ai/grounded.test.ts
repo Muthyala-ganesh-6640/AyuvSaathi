@@ -71,7 +71,59 @@ describe("Grounded Clinical Assistant", () => {
 
   it("handles empty observations list safely with prompt in English to upload and verify", () => {
     const res = groundedAnswer("What are my results?", [], "en");
-    expect(res).toContain("I do not have any user-confirmed report values yet");
-    expect(res).toContain("Upload a report and verify the extracted values first");
+    expect(res).toContain("I do not have any patient-confirmed records yet");
+    expect(res).toContain("Upload a lab report, prescription, or doctor summary first");
+  });
+
+  it("answers prescription and medication questions from GroundedContext", () => {
+    const context = {
+      observations: sampleObservations,
+      medications: [
+        {
+          id: "med-1",
+          ownerId: "user-1",
+          name: "Metformin",
+          strength: "500 mg",
+          instructions: "Twice daily after meals. Take with water.",
+          status: "active" as const,
+          confirmationStatus: "confirmed" as const,
+          provenance: "source_document" as const,
+          createdAt: "2026-10-11T00:00:00Z",
+          updatedAt: "2026-10-11T00:00:00Z",
+        },
+      ],
+      visits: [],
+      documents: [],
+    };
+    const res = groundedAnswer("What medications or prescriptions am I taking?", context, "en");
+    expect(res).toContain("Metformin (500 mg)");
+    expect(res).toContain("Twice daily after meals");
+    expect(res).toContain("Take with water");
+    expect(res).toContain("active");
+  });
+
+  it("answers doctor summary and clinical notes questions from GroundedContext", () => {
+    const context = {
+      observations: sampleObservations,
+      medications: [],
+      visits: [
+        {
+          id: "visit-1",
+          ownerId: "user-1",
+          title: "Dr. Arvind Rao (Endocrinology, Apollo Health City)",
+          sourceIds: ["doc-1"],
+          content: "Patient is adhering well to dietary changes. Diagnosed: Type 2 Diabetes Mellitus - Controlled. Repeat HbA1c in 3 months.",
+          questions: ["Should I adjust my evening dose?"],
+          createdAt: "2026-10-11T00:00:00Z",
+          updatedAt: "2026-10-11T00:00:00Z",
+        },
+      ],
+      documents: [],
+    };
+    const res = groundedAnswer("What did the doctor say in my consultation summary?", context, "en");
+    expect(res).toContain("Dr. Arvind Rao (Endocrinology, Apollo Health City)");
+    expect(res).toContain("Type 2 Diabetes Mellitus - Controlled");
+    expect(res).toContain("Repeat HbA1c in 3 months");
+    expect(res).toContain("Should I adjust my evening dose?");
   });
 });

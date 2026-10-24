@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { NextRequest } from "next/server";
 
 // Import all API routes
@@ -6,7 +6,6 @@ import { GET as healthCheck } from "@/app/api/health/route";
 import { POST as signUp } from "@/app/api/auth/sign-up/route";
 import { POST as signIn } from "@/app/api/auth/sign-in/route";
 import { POST as signOut } from "@/app/api/auth/sign-out/route";
-import { POST as resetAuth } from "@/app/api/auth/reset/route";
 import { GET as getMe, PATCH as patchMe } from "@/app/api/me/route";
 import { POST as seedDemo } from "@/app/api/demo/seed/route";
 import { GET as getDashboard } from "@/app/api/dashboard/route";
@@ -35,7 +34,6 @@ import {
   DELETE as deleteMedicationById,
 } from "@/app/api/medications/[id]/route";
 import { POST as postMedicationSchedule } from "@/app/api/medications/[id]/schedule/route";
-import { PATCH as patchDose } from "@/app/api/doses/[id]/route";
 import {
   GET as getAppointments,
   POST as postAppointments,
@@ -62,7 +60,6 @@ import {
 import { GET as getConversationMessages } from "@/app/api/assistant/conversations/[id]/messages/route";
 import { POST as assistantChat } from "@/app/api/assistant/chat/route";
 import { GET as getNearbyCare } from "@/app/api/care/nearby/route";
-import { store } from "@/lib/db/file-store";
 
 describe("Exhaustive API Route Audit & Validation", () => {
   const testEmail = `audit_${Date.now()}@ayuvsaathi.in`;
@@ -75,7 +72,6 @@ describe("Exhaustive API Route Audit & Validation", () => {
   let createdVisitId = "";
   let createdTimelineId = "";
   let createdConvId = "";
-  let createdDoseId = "";
 
   function req(
     url: string,
@@ -251,6 +247,13 @@ describe("Exhaustive API Route Audit & Validation", () => {
     createdObsId = data.observation.id;
   });
 
+  it("GET /api/observations: lists user observations", async () => {
+    const res = await getObservations(req("/api/observations", "GET", { cookie: sessionCookie }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.observations)).toBe(true);
+  });
+
   it("GET /api/observations/[id]: reads specific observation", async () => {
     const res = await getObservationById(
       req(`/api/observations/${createdObsId}`, "GET", { cookie: sessionCookie }),
@@ -299,6 +302,13 @@ describe("Exhaustive API Route Audit & Validation", () => {
     const data = await res.json();
     expect(data.medication.id).toBeDefined();
     createdMedId = data.medication.id;
+  });
+
+  it("GET /api/medications: lists user medications", async () => {
+    const res = await getMedications(req("/api/medications", "GET", { cookie: sessionCookie }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.medications)).toBe(true);
   });
 
   it("GET /api/medications/[id]: retrieves specific medication with schedule", async () => {
@@ -356,6 +366,13 @@ describe("Exhaustive API Route Audit & Validation", () => {
     createdApptId = data.appointment.id;
   });
 
+  it("GET /api/appointments: lists user appointments", async () => {
+    const res = await getAppointments(req("/api/appointments", "GET", { cookie: sessionCookie }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.appointments)).toBe(true);
+  });
+
   it("PATCH /api/appointments/[id]: updates appointment notes", async () => {
     const res = await patchAppointmentById(
       req(`/api/appointments/${createdApptId}`, "PATCH", {
@@ -393,9 +410,27 @@ describe("Exhaustive API Route Audit & Validation", () => {
     createdVisitId = data.visit.id;
   });
 
+  it("GET /api/visits: lists user visit summaries", async () => {
+    const res = await getVisits(req("/api/visits", "GET", { cookie: sessionCookie }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.visits)).toBe(true);
+  });
+
   it("GET /api/visits/[id]: fetches doctor visit summary", async () => {
     const res = await getVisitById(
       req(`/api/visits/${createdVisitId}`, "GET", { cookie: sessionCookie }),
+      { params: Promise.resolve({ id: createdVisitId }) }
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("PATCH /api/visits/[id]: updates doctor visit summary", async () => {
+    const res = await patchVisitById(
+      req(`/api/visits/${createdVisitId}`, "PATCH", {
+        cookie: sessionCookie,
+        body: { content: "Updated consultation advice." },
+      }),
       { params: Promise.resolve({ id: createdVisitId }) }
     );
     expect(res.status).toBe(200);
@@ -426,6 +461,13 @@ describe("Exhaustive API Route Audit & Validation", () => {
     createdTimelineId = data.event.id;
   });
 
+  it("GET /api/timeline: lists health timeline events", async () => {
+    const res = await getTimeline(req("/api/timeline", "GET", { cookie: sessionCookie }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.timeline)).toBe(true);
+  });
+
   it("GET /api/timeline/[id]: reads specific timeline event", async () => {
     const res = await getTimelineById(
       req(`/api/timeline/${createdTimelineId}`, "GET", { cookie: sessionCookie }),
@@ -445,6 +487,13 @@ describe("Exhaustive API Route Audit & Validation", () => {
   });
 
   // 13. Assistant & Conversations
+  it("GET /api/assistant/conversations: lists user conversations", async () => {
+    const res = await getConversations(req("/api/assistant/conversations", "GET", { cookie: sessionCookie }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.conversations)).toBe(true);
+  });
+
   it("POST /api/assistant/conversations: starts a consultation session", async () => {
     const res = await postConversations(
       req("/api/assistant/conversations", "POST", {
