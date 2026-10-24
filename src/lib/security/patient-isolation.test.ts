@@ -383,21 +383,20 @@ describe("Patient Isolation, Multi-Domain Routing & Security", () => {
     expect(idorDashboardRes.status).toBe(403); // Strict rejection
   });
 
-  it("6. Canonical domain mapping and route guard rules", () => {
+  it("6. Canonical domain mapping and route guard rules (Patient and Doctor dashboards only)", () => {
     // Verify each role maps to its exact dashboard
     expect(getDashboardForRole("patient")).toBe("/en/dashboard");
     expect(getDashboardForRole("doctor")).toBe("/en/doctor");
-    expect(getDashboardForRole("lab_tech")).toBe("/en/lab");
-    expect(getDashboardForRole("pharmacist")).toBe("/en/pharmacy");
 
     // Route allowance validation
     expect(isRouteAllowedForRole("/en/dashboard", "patient")).toBe(true);
     expect(isRouteAllowedForRole("/en/dashboard", "doctor")).toBe(false);
     expect(isRouteAllowedForRole("/en/doctor", "doctor")).toBe(true);
     expect(isRouteAllowedForRole("/en/doctor", "patient")).toBe(false);
-    expect(isRouteAllowedForRole("/en/lab", "lab_tech")).toBe(true);
+    // Removed dashboards: Lab and Pharmacy routes are rejected
+    expect(isRouteAllowedForRole("/en/lab", "lab_tech")).toBe(false);
     expect(isRouteAllowedForRole("/en/lab", "doctor")).toBe(false);
-    expect(isRouteAllowedForRole("/en/pharmacy", "pharmacist")).toBe(true);
+    expect(isRouteAllowedForRole("/en/pharmacy", "pharmacist")).toBe(false);
     expect(isRouteAllowedForRole("/en/pharmacy", "patient")).toBe(false);
   });
 

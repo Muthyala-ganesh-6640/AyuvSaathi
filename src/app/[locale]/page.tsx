@@ -6,8 +6,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import {
   User,
   Stethoscope,
-  FlaskConical,
-  Pill,
   ArrowRight,
   ShieldCheck,
   QrCode,
@@ -42,32 +40,6 @@ export default function LandingPage() {
       href: "/doctor",
       sublink: { text: "Register Doctor Profile →", href: "/auth/professional?role=doctor&mode=register" },
     },
-    {
-      id: "lab_tech",
-      title: "Lab Technician",
-      badge: "Diagnostic Partner",
-      description:
-        "Scan patient QR to securely associate laboratory reports, analyze biomarkers, and notify patients automatically.",
-      icon: FlaskConical,
-      color: "bg-indigo-600",
-      border: "border-indigo-200 hover:border-indigo-400",
-      cta: "Open Laboratory Portal",
-      href: "/lab",
-      sublink: { text: "Register Lab Profile →", href: "/auth/professional?role=lab_tech&mode=register" },
-    },
-    {
-      id: "pharmacist",
-      title: "Pharmacist",
-      badge: "Pharmacy Partner",
-      description:
-        "Scan patient QR to inspect authorized prescriptions, dispense medications, and record transparent pharmacy bills.",
-      icon: Pill,
-      color: "bg-amber-600",
-      border: "border-amber-200 hover:border-amber-400",
-      cta: "Open Pharmacy Portal",
-      href: "/pharmacy",
-      sublink: { text: "Register Pharmacy Profile →", href: "/auth/professional?role=pharmacist&mode=register" },
-    },
   ];
 
   return (
@@ -75,7 +47,7 @@ export default function LandingPage() {
       <div className="max-w-5xl mx-auto w-full py-6 sm:py-10 px-4 sm:px-6">
         {/* Top Header Card & Main Heading */}
         <div className="text-center space-y-4 mb-10">
-          {/* Centered Brand Emblem Card matching Screenshot 2 */}
+          {/* Centered Brand Emblem Card */}
           <div className="flex justify-center">
             <div className="inline-flex flex-col items-center p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E1EBF0] shadow-xs">
               <div className="relative w-14 h-14 overflow-hidden rounded-xl flex items-center justify-center mb-1.5">
@@ -112,12 +84,12 @@ export default function LandingPage() {
 
           {/* Description */}
           <p className="text-sm sm:text-base text-[#61768A] max-w-2xl mx-auto leading-relaxed">
-            AyuvSaathi connects Patients, Doctors, Diagnostic Laboratories, and Pharmacies through one secure health identity.
+            AyuvSaathi connects Patients and Doctors through one secure health identity.
           </p>
         </div>
 
         {/* 2-Column Responsive Grid of Healthcare Role Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {roles.map((role) => {
             const Icon = role.icon;
             return (
@@ -168,8 +140,8 @@ export default function LandingPage() {
           })}
         </div>
 
-        {/* Bottom Section: Security Information matching Screenshot 3 */}
-        <div className="mt-10 p-5 rounded-2xl bg-white border border-[#E1EBF0] text-xs text-slate-600 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs text-center sm:text-left">
+        {/* Bottom Section: Security Information */}
+        <div className="mt-10 p-5 rounded-2xl bg-white border border-[#E1EBF0] text-xs text-slate-600 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs text-center sm:text-left max-w-4xl mx-auto">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#087F8C] shrink-0">
               <QrCode className="w-5 h-5" />

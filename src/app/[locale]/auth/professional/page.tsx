@@ -9,8 +9,6 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { toast } from "sonner";
 import {
   Stethoscope,
-  FlaskConical,
-  Pill,
   Lock,
   Mail,
   User,
@@ -29,12 +27,8 @@ function ProfessionalAuthContent() {
   const currentLocale = useLocale();
   const router = useRouter();
 
-  const initialRole = searchParams.get("role") || "doctor";
   const initialMode = searchParams.get("mode") === "register" ? "register" : "signin";
 
-  const [activeRole, setActiveRole] = useState<"doctor" | "lab_tech" | "pharmacist">(
-    initialRole === "lab_tech" || initialRole === "pharmacist" ? initialRole : "doctor"
-  );
   const [mode, setMode] = useState<"signin" | "register">(initialMode);
   const [loading, setLoading] = useState(false);
 
@@ -54,23 +48,7 @@ function ProfessionalAuthContent() {
   const [department, setDepartment] = useState("");
   const [availability, setAvailability] = useState("Mon - Sat: 9:00 AM - 5:00 PM");
 
-  // Lab Tech specific fields
-  const [technicianId, setTechnicianId] = useState("");
-  const [labName, setLabName] = useState("");
-  const [labRegistration, setLabRegistration] = useState("");
-  const [labAddress, setLabAddress] = useState("");
-  const [designation, setDesignation] = useState("Senior Lab Biochemist");
-
-  // Pharmacist specific fields
-  const [licenseNumber, setLicenseNumber] = useState("");
-  const [pharmacyName, setPharmacyName] = useState("");
-  const [pharmacyAddress, setPharmacyAddress] = useState("");
-
   useEffect(() => {
-    const r = searchParams.get("role");
-    if (r === "doctor" || r === "lab_tech" || r === "pharmacist") {
-      setActiveRole(r);
-    }
     const m = searchParams.get("mode");
     if (m === "register") setMode("register");
   }, [searchParams]);
@@ -92,14 +70,10 @@ function ProfessionalAuthContent() {
       if (!res.ok) {
         toast.error(data.error || "Authentication failed.");
       } else {
-        toast.success(`Welcome back, ${data.role || "professional"}!`);
+        toast.success(`Welcome back, ${data.role || "doctor"}!`);
         const targetLocale = data.language || currentLocale || "en";
         if (data.role === "doctor") {
           window.location.href = `/${targetLocale}/doctor`;
-        } else if (data.role === "lab_tech") {
-          window.location.href = `/${targetLocale}/lab`;
-        } else if (data.role === "pharmacist") {
-          window.location.href = `/${targetLocale}/pharmacy`;
         } else {
           window.location.href = `/${targetLocale}/dashboard`;
         }
@@ -120,21 +94,19 @@ function ProfessionalAuthContent() {
 
     setLoading(true);
     try {
-      const payload: Record<string, unknown> = {
+      if (!medicalRegNumber || !specialization || !hospitalName) {
+        toast.error("Please fill in Medical Registration, Specialization, and Hospital Name.");
+        setLoading(false);
+        return;
+      }
+
+      const payload = {
         displayName,
         email,
         password,
-        role: activeRole,
+        role: "doctor",
         interfaceLanguage: currentLocale,
-      };
-
-      if (activeRole === "doctor") {
-        if (!medicalRegNumber || !specialization || !hospitalName) {
-          toast.error("Please fill in Medical Registration, Specialization, and Hospital Name.");
-          setLoading(false);
-          return;
-        }
-        payload.doctorProfile = {
+        doctorProfile: {
           medicalRegistrationNumber: medicalRegNumber,
           specialization,
           qualification: qualification || "MBBS, MD",
@@ -146,43 +118,8 @@ function ProfessionalAuthContent() {
           professionalEmail: email,
           consultationAvailability: availability,
           verificationStatus: "verified",
-        };
-      } else if (activeRole === "lab_tech") {
-        if (!technicianId || !labName) {
-          toast.error("Please fill in Technician ID and Laboratory Name.");
-          setLoading(false);
-          return;
-        }
-        payload.labTechProfile = {
-          technicianId,
-          qualification: qualification || "B.Sc Medical Laboratory Technology",
-          specialization: specialization || "Clinical Pathology & Biochemistry",
-          labName,
-          labRegistration: labRegistration || "NABL-ACCR-8921",
-          labAddress: labAddress || "Hyderabad, Telangana",
-          contactNumber: contactNumber || "+91 98765 11223",
-          professionalEmail: email,
-          department: department || "Pathology & Diagnostics",
-          designation,
-          verificationStatus: "verified",
-        };
-      } else if (activeRole === "pharmacist") {
-        if (!licenseNumber || !pharmacyName) {
-          toast.error("Please fill in Pharmacist License Number and Pharmacy Name.");
-          setLoading(false);
-          return;
-        }
-        payload.pharmacistProfile = {
-          licenseNumber,
-          qualification: qualification || "B.Pharm, Registered Pharmacist",
-          pharmacyName,
-          pharmacyAddress: pharmacyAddress || "Hyderabad, Telangana",
-          contactNumber: contactNumber || "+91 98765 99887",
-          professionalEmail: email,
-          designation: designation || "Chief Dispensing Pharmacist",
-          verificationStatus: "verified",
-        };
-      }
+        },
+      };
 
       const res = await fetch("/api/auth/sign-up", {
         method: "POST",
@@ -192,168 +129,62 @@ function ProfessionalAuthContent() {
 
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Professional registration failed.");
+        toast.error(data.error || "Doctor registration failed.");
       } else {
-        toast.success("Professional account registered successfully!");
+        toast.success("Doctor profile registered & verified!");
         const targetLocale = data.language || currentLocale || "en";
-        if (activeRole === "doctor") {
-          window.location.href = `/${targetLocale}/doctor`;
-        } else if (activeRole === "lab_tech") {
-          window.location.href = `/${targetLocale}/lab`;
-        } else {
-          window.location.href = `/${targetLocale}/pharmacy`;
-        }
+        window.location.href = `/${targetLocale}/doctor`;
       }
     } catch {
-      toast.error("Network error during registration.");
+      toast.error("Network error during doctor registration.");
     } finally {
       setLoading(false);
     }
   };
 
-  const loginDemoAccount = async (roleType: "doctor" | "lab_tech" | "pharmacist") => {
+  const loginDemoDoctor = async () => {
     setLoading(true);
     try {
-      if (roleType === "doctor") {
+      const regRes = await fetch("/api/auth/sign-up", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          displayName: "Dr. K. Srinivas Rao, MD",
+          email: "dr.srinivas@apollohealth.org",
+          password: "SecureDoctorPassword123!",
+          role: "doctor",
+          doctorProfile: {
+            medicalRegistrationNumber: "MCI-48921-A",
+            specialization: "General Physician & Cardiologist",
+            qualification: "MBBS, MD (Medicine)",
+            experienceYears: 14,
+            hospitalClinicName: "Apollo Health City",
+            hospitalClinicAddress: "Road No. 72, Jubilee Hills, Hyderabad",
+            department: "Internal Medicine",
+            professionalEmail: "dr.srinivas@apollohealth.org",
+            contactNumber: "+91 98490 12345",
+            consultationAvailability: "Mon - Sat: 10:00 AM - 4:00 PM",
+            verificationStatus: "verified",
+          },
+        }),
+      });
+
+      if (regRes.ok || regRes.status === 409) {
         await fetch("/api/auth/sign-in", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email: "doctor@ayuvsaathi.in", password: "demo-password-123" }),
-        }).catch(() => null);
-        // If demo credentials don't match or aren't initialized yet, seed/register automatically:
-        const regRes = await fetch("/api/auth/sign-up", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            displayName: "Dr. K. Srinivas Rao, MD",
-            email: "dr.srinivas@apollohealth.org",
-            password: "SecureDoctorPassword123!",
-            role: "doctor",
-            doctorProfile: {
-              medicalRegistrationNumber: "MCI-48921-A",
-              specialization: "General Physician & Cardiologist",
-              qualification: "MBBS, MD (Medicine)",
-              experienceYears: 14,
-              hospitalClinicName: "Apollo Health City",
-              hospitalClinicAddress: "Road No. 72, Jubilee Hills, Hyderabad",
-              department: "Internal Medicine",
-              professionalEmail: "dr.srinivas@apollohealth.org",
-              contactNumber: "+91 98490 12345",
-              consultationAvailability: "Mon - Sat: 10:00 AM - 4:00 PM",
-              verificationStatus: "verified",
-            },
-          }),
+          body: JSON.stringify({ email: "dr.srinivas@apollohealth.org", password: "SecureDoctorPassword123!" }),
         });
-        const d = await regRes.json();
-        if (regRes.ok || regRes.status === 409) {
-          // If already exists, sign in
-          await fetch("/api/auth/sign-in", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ email: "dr.srinivas@apollohealth.org", password: "SecureDoctorPassword123!" }),
-          });
-          toast.success("Logged in as Dr. K. Srinivas Rao");
-          window.location.href = `/${currentLocale}/doctor`;
-          return;
-        }
-      } else if (roleType === "lab_tech") {
-        const regRes = await fetch("/api/auth/sign-up", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            displayName: "Rajesh Varma, MLT",
-            email: "rajesh.lab@asterdiagnostics.in",
-            password: "SecureLabPassword123!",
-            role: "lab_tech",
-            labTechProfile: {
-              technicianId: "AST-TECH-042",
-              qualification: "M.Sc Medical Biochemistry",
-              specialization: "Clinical Pathology & Hematology",
-              labName: "Aster Diagnostic Centre",
-              labRegistration: "NABL-ISO-15189",
-              labAddress: "Banjara Hills, Hyderabad",
-              contactNumber: "+91 98765 33445",
-              professionalEmail: "rajesh.lab@asterdiagnostics.in",
-              department: "Biochemistry & Hematology",
-              designation: "Lead Diagnostic Technologist",
-              verificationStatus: "verified",
-            },
-          }),
-        });
-        await fetch("/api/auth/sign-in", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email: "rajesh.lab@asterdiagnostics.in", password: "SecureLabPassword123!" }),
-        });
-        toast.success("Logged in as Lab Technician Rajesh Varma");
-        window.location.href = `/${currentLocale}/lab`;
-        return;
-      } else if (roleType === "pharmacist") {
-        const regRes = await fetch("/api/auth/sign-up", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            displayName: "Priya Sharma, B.Pharm",
-            email: "priya.pharma@medplus.in",
-            password: "SecurePharmaPassword123!",
-            role: "pharmacist",
-            pharmacistProfile: {
-              licenseNumber: "TS-PHARM-2024-8841",
-              qualification: "B.Pharm, Registered Pharmacist",
-              pharmacyName: "MedPlus Pharmacy & Wellness",
-              pharmacyAddress: "Madhapur Main Rd, Hitech City, Hyderabad",
-              contactNumber: "+91 98765 88990",
-              professionalEmail: "priya.pharma@medplus.in",
-              designation: "Chief Dispensing Pharmacist",
-              verificationStatus: "verified",
-            },
-          }),
-        });
-        await fetch("/api/auth/sign-in", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email: "priya.pharma@medplus.in", password: "SecurePharmaPassword123!" }),
-        });
-        toast.success("Logged in as Pharmacist Priya Sharma");
-        window.location.href = `/${currentLocale}/pharmacy`;
+        toast.success("Logged in as Dr. K. Srinivas Rao");
+        window.location.href = `/${currentLocale}/doctor`;
         return;
       }
-    } catch (err) {
+    } catch {
       toast.error("Quick demo login failed.");
     } finally {
       setLoading(false);
     }
   };
-
-  const roleMeta = {
-    doctor: {
-      title: "Doctor Portal",
-      icon: Stethoscope,
-      color: "text-blue-700 bg-blue-100",
-      activeBg: "bg-blue-600 text-white",
-      inactiveBg: "bg-blue-50 text-blue-800 hover:bg-blue-100",
-      border: "border-blue-200",
-      accent: "#2563EB",
-    },
-    lab_tech: {
-      title: "Laboratory Portal",
-      icon: FlaskConical,
-      color: "text-purple-700 bg-purple-100",
-      activeBg: "bg-purple-600 text-white",
-      inactiveBg: "bg-purple-50 text-purple-800 hover:bg-purple-100",
-      border: "border-purple-200",
-      accent: "#7C3AED",
-    },
-    pharmacist: {
-      title: "Pharmacy Portal",
-      icon: Pill,
-      color: "text-amber-700 bg-amber-100",
-      activeBg: "bg-amber-600 text-white",
-      inactiveBg: "bg-amber-50 text-amber-800 hover:bg-amber-100",
-      border: "border-amber-200",
-      accent: "#D97706",
-    },
-  }[activeRole];
 
   return (
     <AppShell>
@@ -362,41 +193,13 @@ function ProfessionalAuthContent() {
           <div className="text-center space-y-2 flex flex-col items-center">
             <BrandLogo variant="auth" className="justify-center mb-1" />
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
-              <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
               <span>AyuvSaathi Authorized Healthcare Network</span>
             </div>
-            <h1 className="text-2xl font-bold text-[#17344F]">{roleMeta.title}</h1>
+            <h1 className="text-2xl font-bold text-[#17344F]">Doctor Portal</h1>
             <p className="text-xs text-[#61768A]">
-              Secure role-verified access for authorized medical personnel
+              Secure role-verified clinical access for authorized medical doctors
             </p>
-          </div>
-
-          {/* Role switcher pills */}
-          <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 rounded-xl">
-            {(["doctor", "lab_tech", "pharmacist"] as const).map((r) => {
-              const active = activeRole === r;
-              const meta = {
-                doctor: { label: "Doctor", icon: Stethoscope },
-                lab_tech: { label: "Lab Tech", icon: FlaskConical },
-                pharmacist: { label: "Pharmacist", icon: Pill },
-              }[r];
-              const Icon = meta.icon;
-              return (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setActiveRole(r)}
-                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    active
-                      ? "bg-white text-[#17344F] shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{meta.label}</span>
-                </button>
-              );
-            })}
           </div>
 
           {/* Mode switch (Sign In vs Register) */}
@@ -410,7 +213,7 @@ function ProfessionalAuthContent() {
                   : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
-              Sign In
+              Doctor Sign In
             </button>
             <button
               type="button"
@@ -421,42 +224,26 @@ function ProfessionalAuthContent() {
                   : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
-              Register Profile
+              Register Doctor Profile
             </button>
           </div>
 
           {/* Fast Demo Accounts Helper */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+          <div className="p-3.5 rounded-xl bg-blue-50/50 border border-blue-200/60 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-700">Quick 1-Click Evaluator Login:</span>
-              <span className="text-[10px] text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                Instant Verified Session
+              <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                Verified Doctor Session
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => loginDemoAccount("doctor")}
+                onClick={loginDemoDoctor}
                 disabled={loading}
-                className="text-xs px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium border border-blue-200 transition-colors cursor-pointer"
+                className="text-xs px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-xs transition-colors cursor-pointer"
               >
-                👨‍⚕️ Demo Doctor (Dr. Srinivas)
-              </button>
-              <button
-                type="button"
-                onClick={() => loginDemoAccount("lab_tech")}
-                disabled={loading}
-                className="text-xs px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium border border-purple-200 transition-colors cursor-pointer"
-              >
-                🔬 Demo Lab Tech (Rajesh Varma)
-              </button>
-              <button
-                type="button"
-                onClick={() => loginDemoAccount("pharmacist")}
-                disabled={loading}
-                className="text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium border border-amber-200 transition-colors cursor-pointer"
-              >
-                💊 Demo Pharmacist (Priya Sharma)
+                👨‍⚕️ Demo Doctor (Dr. K. Srinivas Rao, MD)
               </button>
             </div>
           </div>
@@ -465,7 +252,7 @@ function ProfessionalAuthContent() {
             <form onSubmit={handleSignIn} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Professional Email Address
+                  Doctor Email Address
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
@@ -474,7 +261,7 @@ function ProfessionalAuthContent() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="doctor@hospital.org"
+                    placeholder="dr.srinivas@apollohealth.org"
                     className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] focus:ring-1 focus:ring-[#087F72] outline-hidden"
                   />
                 </div>
@@ -502,7 +289,7 @@ function ProfessionalAuthContent() {
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#17344F] hover:bg-[#087F72] text-white text-sm font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
               >
-                <span>{loading ? "Authenticating..." : `Sign In to ${roleMeta.title}`}</span>
+                <span>{loading ? "Authenticating..." : "Sign In to Doctor Portal"}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -511,7 +298,7 @@ function ProfessionalAuthContent() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Full Name *
+                    Doctor Full Name *
                   </label>
                   <div className="relative">
                     <User className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
@@ -520,7 +307,7 @@ function ProfessionalAuthContent() {
                       required
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder={activeRole === "doctor" ? "Dr. Priya Rao" : "Priya Rao"}
+                      placeholder="Dr. Priya Rao"
                       className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] focus:ring-1 focus:ring-[#087F72] outline-hidden"
                     />
                   </div>
@@ -555,7 +342,7 @@ function ProfessionalAuthContent() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@hospital.org"
+                      placeholder="dr.priya@apollohealth.org"
                       className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] focus:ring-1 focus:ring-[#087F72] outline-hidden"
                     />
                   </div>
@@ -579,96 +366,93 @@ function ProfessionalAuthContent() {
                 </div>
               </div>
 
-              {/* Role-Specific Fields */}
-              {activeRole === "doctor" && (
-                <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-200/60 space-y-3">
-                  <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">
-                    Doctor Registration Details
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Medical Registration No. *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={medicalRegNumber}
-                        onChange={(e) => setMedicalRegNumber(e.target.value)}
-                        placeholder="MCI-12345 or State Reg"
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Specialization *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={specialization}
-                        onChange={(e) => setSpecialization(e.target.value)}
-                        placeholder="Cardiologist, Physician, etc."
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Qualification
-                      </label>
-                      <input
-                        type="text"
-                        value={qualification}
-                        onChange={(e) => setQualification(e.target.value)}
-                        placeholder="MBBS, MD (Medicine)"
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Years of Experience
-                      </label>
-                      <input
-                        type="number"
-                        value={experienceYears}
-                        onChange={(e) => setExperienceYears(e.target.value)}
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Hospital / Clinic Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={hospitalName}
-                        onChange={(e) => setHospitalName(e.target.value)}
-                        placeholder="Apollo Hospital / City Clinic"
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Department
-                      </label>
-                      <input
-                        type="text"
-                        value={department}
-                        onChange={(e) => setDepartment(e.target.value)}
-                        placeholder="General Medicine / Cardiology"
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
-                      />
-                    </div>
+              {/* Doctor Registration Details */}
+              <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-200/60 space-y-3">
+                <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">
+                  Doctor Registration Details
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Medical Registration No. *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={medicalRegNumber}
+                      onChange={(e) => setMedicalRegNumber(e.target.value)}
+                      placeholder="MCI-12345 or State Reg"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
+                    />
                   </div>
 
                   <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Specialization *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={specialization}
+                      onChange={(e) => setSpecialization(e.target.value)}
+                      placeholder="Cardiology / General Medicine"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Qualification
+                    </label>
+                    <input
+                      type="text"
+                      value={qualification}
+                      onChange={(e) => setQualification(e.target.value)}
+                      placeholder="MBBS, MD (Medicine)"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Years of Experience
+                    </label>
+                    <input
+                      type="number"
+                      value={experienceYears}
+                      onChange={(e) => setExperienceYears(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Hospital / Clinic Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={hospitalName}
+                      onChange={(e) => setHospitalName(e.target.value)}
+                      placeholder="Apollo Health City"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Department
+                    </label>
+                    <input
+                      type="text"
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                      placeholder="Department of Medicine"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
                       Hospital / Clinic Address
                     </label>
@@ -676,155 +460,43 @@ function ProfessionalAuthContent() {
                       type="text"
                       value={hospitalAddress}
                       onChange={(e) => setHospitalAddress(e.target.value)}
-                      placeholder="Jubilee Hills, Hyderabad"
+                      placeholder="Jubilee Hills, Hyderabad, Telangana"
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Consultation Hours
+                    </label>
+                    <input
+                      type="text"
+                      value={availability}
+                      onChange={(e) => setAvailability(e.target.value)}
+                      placeholder="Mon - Sat: 9:00 AM - 5:00 PM"
                       className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-blue-600 outline-hidden"
                     />
                   </div>
                 </div>
-              )}
-
-              {activeRole === "lab_tech" && (
-                <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-200/60 space-y-3">
-                  <h3 className="text-xs font-bold text-purple-900 uppercase tracking-wide">
-                    Laboratory Details
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Technician / Employee ID *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={technicianId}
-                        onChange={(e) => setTechnicianId(e.target.value)}
-                        placeholder="TECH-9912"
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-purple-600 outline-hidden"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Laboratory Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={labName}
-                        onChange={(e) => setLabName(e.target.value)}
-                        placeholder="Aster Diagnostic Labs"
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-purple-600 outline-hidden"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Designation / Role
-                      </label>
-                      <input
-                        type="text"
-                        value={designation}
-                        onChange={(e) => setDesignation(e.target.value)}
-                        placeholder="Senior Biochemist / Pathologist"
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-purple-600 outline-hidden"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Lab Accreditation / Reg
-                      </label>
-                      <input
-                        type="text"
-                        value={labRegistration}
-                        onChange={(e) => setLabRegistration(e.target.value)}
-                        placeholder="NABL-15189"
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-purple-600 outline-hidden"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Laboratory Address
-                    </label>
-                    <input
-                      type="text"
-                      value={labAddress}
-                      onChange={(e) => setLabAddress(e.target.value)}
-                      placeholder="Banjara Hills, Hyderabad"
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-purple-600 outline-hidden"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {activeRole === "pharmacist" && (
-                <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-200/60 space-y-3">
-                  <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wide">
-                    Pharmacy Registration Details
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Pharmacist License No. *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={licenseNumber}
-                        onChange={(e) => setLicenseNumber(e.target.value)}
-                        placeholder="PHARM-REG-8821"
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-amber-600 outline-hidden"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Pharmacy / Store Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={pharmacyName}
-                        onChange={(e) => setPharmacyName(e.target.value)}
-                        placeholder="Apollo Pharmacy / MedPlus"
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-amber-600 outline-hidden"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Pharmacy Store Address
-                    </label>
-                    <input
-                      type="text"
-                      value={pharmacyAddress}
-                      onChange={(e) => setPharmacyAddress(e.target.value)}
-                      placeholder="Shop 4, Hitech City, Hyderabad"
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 bg-white focus:border-amber-600 outline-hidden"
-                    />
-                  </div>
-                </div>
-              )}
+              </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#087F72] hover:bg-[#06665B] text-white text-sm font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#17344F] hover:bg-[#087F72] text-white text-sm font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
               >
-                <span>{loading ? "Registering..." : `Register as Verified ${activeRole === "doctor" ? "Doctor" : activeRole === "lab_tech" ? "Lab Technician" : "Pharmacist"}`}</span>
-                <CheckCircle2 className="w-4 h-4" />
+                <span>{loading ? "Registering..." : "Complete Doctor Registration"}</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </form>
           )}
 
-          <div className="pt-2 border-t border-gray-100 text-center text-xs text-gray-500">
+          <div className="text-center pt-2">
             <Link
-              href="/auth/role-select"
-              className="text-[#17344F] hover:text-[#087F72] font-medium"
+              href="/auth/sign-in"
+              className="text-xs text-slate-500 hover:text-teal-700 font-medium"
             >
-              ← Back to Role Selection
+              ← Back to Patient & Standard Sign In
             </Link>
           </div>
         </div>
@@ -835,7 +507,7 @@ function ProfessionalAuthContent() {
 
 export default function ProfessionalAuthPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-500 text-sm">Loading portal...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
       <ProfessionalAuthContent />
     </Suspense>
   );

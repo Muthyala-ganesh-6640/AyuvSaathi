@@ -41,7 +41,6 @@ import {
   Phone,
   Menu,
   X,
-  FlaskConical,
 } from "lucide-react";
 import { useCallback, useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -270,9 +269,8 @@ export default function DashboardPage() {
       if (res.ok) {
         const json = await res.json();
         // Server-verified authoritative role guard: redirect professionals to their dedicated workspace
-        if (json.user?.role && json.user.role !== "patient") {
-          const target = json.user.role === "doctor" ? "/doctor" : json.user.role === "lab_tech" ? "/lab" : "/pharmacy";
-          window.location.href = `/${locale}${target}`;
+        if (json.user?.role && json.user.role === "doctor") {
+          window.location.href = `/${locale}/doctor`;
           return;
         }
         setData(json);
@@ -322,7 +320,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleSwitchDomain = async (targetRole: "patient" | "doctor" | "lab_tech" | "pharmacist") => {
+  const handleSwitchDomain = async (targetRole: "patient" | "doctor") => {
     try {
       const res = await fetch("/api/auth/switch-role", {
         method: "POST",
@@ -335,7 +333,7 @@ export default function DashboardPage() {
         window.location.href = d.redirectUrl;
       } else {
         toast.error(d.error || `Please register your ${targetRole} profile to access this portal.`);
-        router.push("/auth/role-select");
+        router.push("/auth/professional?role=doctor&mode=register");
       }
     } catch {
       toast.error("Error switching domain");
@@ -736,28 +734,7 @@ export default function DashboardPage() {
                       <Stethoscope className="w-4 h-4 text-blue-600" />
                       <span>Doctor Workspace</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        handleSwitchDomain("lab_tech");
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-teal-800 hover:bg-teal-50 transition-colors text-left cursor-pointer"
-                    >
-                      <FlaskConical className="w-4 h-4 text-teal-600" />
-                      <span>Laboratory Portal</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        handleSwitchDomain("pharmacist");
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50 transition-colors text-left cursor-pointer"
-                    >
-                      <Pill className="w-4 h-4 text-amber-600" />
-                      <span>Pharmacy Portal</span>
-                    </button>
+
                   </div>
                 </div>
               </div>
@@ -806,22 +783,7 @@ export default function DashboardPage() {
                 <Stethoscope className="w-3.5 h-3.5 text-blue-300" />
                 <span>Doctor Portal</span>
               </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchDomain("lab_tech")}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-600/30 hover:bg-teal-600/50 border border-teal-400/40 text-teal-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-              >
-                <FlaskConical className="w-3.5 h-3.5 text-teal-300" />
-                <span>Diagnostic Lab</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchDomain("pharmacist")}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-600/30 hover:bg-amber-600/50 border border-amber-400/40 text-amber-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-              >
-                <Pill className="w-3.5 h-3.5 text-amber-300" />
-                <span>Pharmacy Portal</span>
-              </button>
+
             </div>
           </div>
           <div className="flex flex-col xl:flex-row gap-5">

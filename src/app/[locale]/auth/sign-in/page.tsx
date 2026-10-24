@@ -1,22 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { useState } from "react";
 import { toast } from "sonner";
 import { Lock, Mail, ArrowRight } from "lucide-react";
 
 export default function SignInPage() {
   const t = useTranslations("auth");
   const common = useTranslations("common");
+  const router = useRouter();
   const currentLocale = useLocale();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const loginWithCreds = async (userEmail: string, userPass: string) => {
+  const executeSignIn = async (userEmail: string, userPass: string) => {
     setLoading(true);
     try {
       const res = await fetch("/api/auth/sign-in", {
@@ -34,10 +36,6 @@ export default function SignInPage() {
           window.location.href = data.targetDashboard;
         } else if (data.role === "doctor") {
           window.location.href = `/${targetLocale}/doctor`;
-        } else if (data.role === "lab_tech") {
-          window.location.href = `/${targetLocale}/lab`;
-        } else if (data.role === "pharmacist") {
-          window.location.href = `/${targetLocale}/pharmacy`;
         } else {
           window.location.href = `/${targetLocale}/dashboard`;
         }
@@ -55,17 +53,17 @@ export default function SignInPage() {
       toast.error("Please enter your email and password.");
       return;
     }
-    await loginWithCreds(email, password);
+    await executeSignIn(email, password);
   };
 
   return (
     <AppShell>
-      <div className="max-w-md mx-auto w-full py-8">
-        <div className="bg-white p-6 sm:p-8 rounded-xl border border-[#E1EBF0] shadow-xs space-y-6">
+      <div className="max-w-md mx-auto w-full py-8 px-4 sm:px-6">
+        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-[#E1EBF0] shadow-sm space-y-6">
           <div className="text-center space-y-2 flex flex-col items-center">
             <BrandLogo variant="auth" className="justify-center mb-1" />
-            <h1 className="text-xl font-bold text-[#17344F]">{t("signInTitle")}</h1>
-            <p className="text-xs text-[#61768A]">{t("signInSubtitle")}</p>
+            <h1 className="text-2xl font-bold text-[#17344F]">{t("signInTitle")}</h1>
+            <p className="text-xs text-[#61768A]">{t("subtitle")}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -80,7 +78,7 @@ export default function SignInPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="patient@example.com"
+                  placeholder="name@example.com"
                   className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] focus:ring-1 focus:ring-[#087F72] outline-hidden transition-all"
                 />
               </div>
@@ -93,7 +91,7 @@ export default function SignInPage() {
                 </label>
                 <Link
                   href="/auth/reset"
-                  className="text-xs text-[#087F72] hover:underline font-medium"
+                  className="text-xs text-[#087F72] hover:underline"
                 >
                   {t("forgotPassword")}
                 </Link>
@@ -133,10 +131,10 @@ export default function SignInPage() {
 
           <div className="pt-1 text-center text-xs">
             <Link
-              href="/auth/role-select"
+              href="/auth/professional?role=doctor"
               className="text-[#17344F] hover:text-[#087F72] font-medium transition-colors"
             >
-              Healthcare Professional? Select your portal →
+              Doctor? Open Doctor Portal →
             </Link>
           </div>
         </div>

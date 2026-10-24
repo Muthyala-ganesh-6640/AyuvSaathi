@@ -3,8 +3,8 @@ import type { UserRole } from "@/lib/db/types";
 export const ROLE_DASHBOARDS: Record<UserRole, string> = {
   patient: "/dashboard",
   doctor: "/doctor",
-  lab_tech: "/lab",
-  pharmacist: "/pharmacy",
+  lab_tech: "/dashboard",
+  pharmacist: "/dashboard",
 };
 
 export const ROLE_NAMES: Record<UserRole, string> = {
@@ -19,7 +19,7 @@ export const ROLE_NAMES: Record<UserRole, string> = {
  */
 export function getDashboardForRole(role?: UserRole | string, locale: string = "en"): string {
   const normalizedRole = (role as UserRole) || "patient";
-  const path = ROLE_DASHBOARDS[normalizedRole] || "/dashboard";
+  const path = normalizedRole === "doctor" ? "/doctor" : "/dashboard";
   return `/${locale}${path}`;
 }
 
@@ -50,14 +50,14 @@ export function isRouteAllowedForRole(pathname: string, role?: UserRole | string
     return normalizedRole === "doctor";
   }
 
-  // Lab-only routes
-  if (pathWithoutLocale === "/lab" || pathWithoutLocale.startsWith("/lab/")) {
-    return normalizedRole === "lab_tech";
-  }
-
-  // Pharmacy-only routes
-  if (pathWithoutLocale === "/pharmacy" || pathWithoutLocale.startsWith("/pharmacy/")) {
-    return normalizedRole === "pharmacist";
+  // Removed dashboards: Lab and Pharmacy are no longer allowed
+  if (
+    pathWithoutLocale === "/lab" ||
+    pathWithoutLocale.startsWith("/lab/") ||
+    pathWithoutLocale === "/pharmacy" ||
+    pathWithoutLocale.startsWith("/pharmacy/")
+  ) {
+    return false;
   }
 
   // Patient-only routes (personal health records, timeline, prescriptions, reports)

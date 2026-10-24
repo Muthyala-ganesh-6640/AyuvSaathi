@@ -14,8 +14,6 @@ import {
   Menu,
   X,
   Stethoscope,
-  FlaskConical,
-  Pill,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -39,14 +37,7 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
 
-  const homeHref =
-    user?.role === "doctor"
-      ? "/doctor"
-      : user?.role === "lab_tech"
-      ? "/lab"
-      : user?.role === "pharmacist"
-      ? "/pharmacy"
-      : "/dashboard";
+  const homeHref = user?.role === "doctor" ? "/doctor" : "/dashboard";
 
   const handleSignOut = async () => {
     try {
@@ -135,39 +126,23 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
         {/* Healthcare Ecosystem Portal Switcher (only shown after login) */}
         {user && (
           <div className="hidden lg:flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
-          <Link
-            href="/dashboard"
-            className={`px-2.5 py-1 rounded-lg transition-colors ${
-              pathname.includes("/dashboard") ? "bg-white text-teal-800 shadow-xs" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Patient
-          </Link>
-          <Link
-            href="/doctor"
-            className={`px-2.5 py-1 rounded-lg transition-colors ${
-              pathname.includes("/doctor") ? "bg-white text-blue-800 shadow-xs" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Doctor
-          </Link>
-          <Link
-            href="/lab"
-            className={`px-2.5 py-1 rounded-lg transition-colors ${
-              pathname.includes("/lab") ? "bg-white text-purple-800 shadow-xs" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Lab
-          </Link>
-          <Link
-            href="/pharmacy"
-            className={`px-2.5 py-1 rounded-lg transition-colors ${
-              pathname.includes("/pharmacy") ? "bg-white text-amber-800 shadow-xs" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Pharmacy
-          </Link>
-        </div>
+            <Link
+              href="/dashboard"
+              className={`px-2.5 py-1 rounded-lg transition-colors ${
+                pathname.includes("/dashboard") ? "bg-white text-teal-800 shadow-xs" : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Patient
+            </Link>
+            <Link
+              href="/doctor"
+              className={`px-2.5 py-1 rounded-lg transition-colors ${
+                pathname.includes("/doctor") ? "bg-white text-blue-800 shadow-xs" : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Doctor
+            </Link>
+          </div>
         )}
         {user && (
           <button
@@ -187,11 +162,11 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
           <button
             type="button"
             className="relative p-2 text-[#61768A] hover:text-[#17344F] hover:bg-[#F7FAFC] rounded-xl transition-colors cursor-pointer"
-          title={h("notifications")}
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#D94B55] ring-2 ring-white" />
-        </button>
+            title={h("notifications")}
+          >
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#D94B55] ring-2 ring-white" />
+          </button>
         )}
 
         {/* Language Selector Dropdown */}

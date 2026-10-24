@@ -1,19 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { useState } from "react";
 import { toast } from "sonner";
-import { Lock, Mail, User, Globe, ArrowRight } from "lucide-react";
+import { User, Lock, Mail, Globe, ArrowRight } from "lucide-react";
 
 export default function SignUpPage() {
   const t = useTranslations("auth");
   const common = useTranslations("common");
-  const currentLocale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const currentLocale = useLocale();
 
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -75,25 +75,7 @@ export default function SignUpPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                {t("preferredLanguage")}
-              </label>
-              <div className="relative">
-                <Globe className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => handleLanguageChange(e.target.value as "en" | "te" | "hi")}
-                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] focus:ring-1 focus:ring-[#087F72] outline-hidden bg-white cursor-pointer"
-                >
-                  <option value="en">English</option>
-                  <option value="te">తెలుగు (Telugu)</option>
-                  <option value="hi">हिन्दी (Hindi)</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                {t("displayName")}
+                {t("fullName")}
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
@@ -102,8 +84,8 @@ export default function SignUpPage() {
                   required
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Venkatesh Rao"
-                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] focus:ring-1 focus:ring-[#087F72] outline-hidden transition-all"
+                  placeholder="e.g. Ramesh Kumar"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] focus:ring-1 focus:ring-[#087F72] outline-hidden transition-all"
                 />
               </div>
             </div>
@@ -119,8 +101,8 @@ export default function SignUpPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="patient@example.com"
-                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] focus:ring-1 focus:ring-[#087F72] outline-hidden transition-all"
+                  placeholder="name@example.com"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] focus:ring-1 focus:ring-[#087F72] outline-hidden transition-all"
                 />
               </div>
             </div>
@@ -137,12 +119,41 @@ export default function SignUpPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] focus:ring-1 focus:ring-[#087F72] outline-hidden transition-all"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] focus:ring-1 focus:ring-[#087F72] outline-hidden transition-all"
                 />
               </div>
-              <p className="text-[11px] text-gray-500 mt-1">
-                {t("passwordRequirements")}
-              </p>
+            </div>
+
+            {/* Language Selector */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-[#087F72]" />
+                <span>Preferred Language</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleLanguageChange("en")}
+                  className={`py-2 px-3 text-xs font-medium rounded-xl border text-center transition-all cursor-pointer ${
+                    selectedLanguage === "en"
+                      ? "border-[#087F72] bg-[#DDF5F0] text-[#087F72] font-semibold"
+                      : "border-gray-200 hover:border-gray-300 text-gray-700"
+                  }`}
+                >
+                  English
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleLanguageChange("te")}
+                  className={`py-2 px-3 text-xs font-medium rounded-xl border text-center transition-all cursor-pointer ${
+                    selectedLanguage === "te"
+                      ? "border-[#087F72] bg-[#DDF5F0] text-[#087F72] font-semibold"
+                      : "border-gray-200 hover:border-gray-300 text-gray-700"
+                  }`}
+                >
+                  తెలుగు (Telugu)
+                </button>
+              </div>
             </div>
 
             <button
@@ -167,10 +178,10 @@ export default function SignUpPage() {
 
           <div className="pt-1 text-center text-xs">
             <Link
-              href="/auth/role-select"
+              href="/auth/professional?role=doctor&mode=register"
               className="text-[#17344F] hover:text-[#087F72] font-medium transition-colors"
             >
-              Signing up as a Doctor, Lab Tech, or Pharmacist? Select role →
+              Registering as a Doctor? Open Doctor Portal →
             </Link>
           </div>
         </div>
