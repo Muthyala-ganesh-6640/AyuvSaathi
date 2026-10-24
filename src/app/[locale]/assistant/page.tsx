@@ -3,13 +3,17 @@
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/AppShell";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { VoiceInput } from "@/components/assistant/VoiceInput";
+import { speakText } from "@/lib/audio/speech";
 import {
   Bot,
   Send,
   User,
   ShieldAlert,
+  Volume2,
+  VolumeX,
+  Square,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,7 +35,11 @@ export default function AssistantPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [spokenResponse, setSpokenResponse] = useState<string | null>(null);
+  const [autoSpeak, setAutoSpeak] = useState(false);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const activeSpeechHandleRef = useRef<{ stop: () => void } | null>(null);
 
   const sampleQuestions = [
     t("sampleQuestion1"),
@@ -47,9 +55,64 @@ export default function AssistantPage() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = async (questionText?: string) => {
+  // Clean up any speech synthesis when component unmounts
+  useEffect(() => {
+    return () => {
+      if (activeSpeechHandleRef.current) {
+        activeSpeechHandleRef.current.stop();
+        activeSpeechHandleRef.current = null;
+      }
+    };
+  }, []);
+
+  // Stop current speech
+  const stopCurrentSpeech = useCallback(() => {
+    if (activeSpeechHandleRef.current) {
+      activeSpeechHandleRef.current.stop();
+      activeSpeechHandleRef.current = null;
+    }
+    setSpeakingMsgId(null);
+  }, []);
+
+  // Play / Stop a specific message audio
+  const toggleSpeakMessage = useCallback(
+    (msgId: string, content: string) => {
+      if (speakingMsgId === msgId) {
+        stopCurrentSpeech();
+        return;
+      }
+
+      stopCurrentSpeech();
+      setSpeakingMsgId(msgId);
+
+      activeSpeechHandleRef.current = speakText(content, {
+        language: locale,
+        onStart: () => setSpeakingMsgId(msgId),
+        onEnd: () => {
+          setSpeakingMsgId(null);
+          activeSpeechHandleRef.current = null;
+        },
+        onError: () => {
+          setSpeakingMsgId(null);
+          activeSpeechHandleRef.current = null;
+          toast.error("Audio playback encountered an issue in browser");
+        },
+      });
+    },
+    [locale, speakingMsgId, stopCurrentSpeech]
+  );
+
+  const handleSend = async (questionText?: string, fromVoice = false) => {
     const textToSend = questionText || input;
     if (!textToSend.trim() || loading) return;
+
+    // If query originated from microphone, enable read-aloud for response
+    if (fromVoice) {
+      setAutoSpeak(true);
+    }
+
+    // Stop existing speech before generating new response
+    stopCurrentSpeech();
 
     const userMsg: MessageItem = {
       id: crypto.randomUUID(),
@@ -85,7 +148,12 @@ export default function AssistantPage() {
           setConversationId(data.conversationId);
         }
         setMessages((prev) => [...prev, data.message]);
-        setSpokenResponse(data.message.content);
+
+        // Trigger read aloud if voice mode is on or user spoke the query
+        if (fromVoice || autoSpeak) {
+          setSpokenResponse(data.message.content);
+          toggleSpeakMessage(data.message.id, data.message.content);
+        }
       } else {
         setMessages((prev) => prev.filter((message) => message.id !== userMsg.id));
         toast.error(data.error || "Could not generate response");
@@ -115,6 +183,37 @@ export default function AssistantPage() {
             <p className="text-xs sm:text-sm text-[#61768A]">
               {t("subtitle")}
             </p>
+          </div>
+
+          {/* Voice Mode Toggle */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !autoSpeak;
+                setAutoSpeak(next);
+                if (!next) stopCurrentSpeech();
+                toast.info(`Voice Read-Aloud ${next ? "Enabled (Responses will be read aloud)" : "Disabled"}`);
+              }}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                autoSpeak
+                  ? "bg-teal-50 text-[#087F8C] border-teal-300 ring-1 ring-teal-300"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+              }`}
+              title="Toggle automatic speech read-aloud for assistant answers"
+            >
+              {autoSpeak ? (
+                <>
+                  <Volume2 className="w-4 h-4 text-[#087F8C] animate-pulse" />
+                  <span>Voice Mode: ON</span>
+                </>
+              ) : (
+                <>
+                  <VolumeX className="w-4 h-4 text-gray-400" />
+                  <span>Voice Mode: OFF</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
@@ -177,6 +276,41 @@ export default function AssistantPage() {
                     }`}
                   >
                     <p className="whitespace-pre-wrap">{m.content}</p>
+
+                    {/* Assistant Read Aloud Button */}
+                    {m.role === "assistant" && (
+                      <div className="mt-3 pt-2.5 border-t border-[#E1EBF0] flex items-center justify-between text-xs">
+                        <button
+                          type="button"
+                          onClick={() => toggleSpeakMessage(m.id, m.content)}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+                            speakingMsgId === m.id
+                              ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                              : "bg-teal-50 hover:bg-teal-100 text-[#087F8C] border border-teal-200"
+                          }`}
+                          title="Listen to this explanation"
+                        >
+                          {speakingMsgId === m.id ? (
+                            <>
+                              <Square className="w-3.5 h-3.5 fill-current text-blue-700" />
+                              <span className="font-semibold text-blue-800">Stop Reading</span>
+                            </>
+                          ) : (
+                            <>
+                              <Volume2 className="w-3.5 h-3.5" />
+                              <span>Read Aloud</span>
+                            </>
+                          )}
+                        </button>
+
+                        {speakingMsgId === m.id && (
+                          <span className="flex items-center gap-1 text-[11px] text-blue-700 font-semibold animate-pulse">
+                            <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                            AyuvSaathi is speaking...
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {m.role === "user" && (
@@ -213,8 +347,18 @@ export default function AssistantPage() {
               language={locale}
               isProcessing={loading}
               assistantResponseToSpeak={spokenResponse}
-              onTranscriptReady={(transcript) => handleSend(transcript)}
+              autoSpeakResponses={autoSpeak}
+              onInterimTranscript={(interim) => {
+                if (interim) {
+                  setInput(interim);
+                }
+              }}
+              onTranscriptReady={(transcript) => {
+                setInput(transcript);
+                handleSend(transcript, true);
+              }}
             />
+
             <input
               type="text"
               value={input}
@@ -222,6 +366,7 @@ export default function AssistantPage() {
               placeholder={t("inputPlaceholder")}
               className="flex-1 px-4 py-3 rounded-xl border border-[#E1EBF0] focus:border-[#087F8C] focus:ring-1 focus:ring-[#087F8C] outline-hidden text-xs sm:text-sm bg-white"
             />
+
             <button
               type="submit"
               disabled={loading || !input.trim()}
