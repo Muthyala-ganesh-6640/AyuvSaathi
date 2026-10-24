@@ -30,7 +30,11 @@ export async function POST(request: NextRequest) {
   }
 
   const { cookieHeader } = await createSession(profile);
-  const response = Response.json({ ok: true, language: profile.interfaceLanguage });
+  const response = Response.json({
+    ok: true,
+    language: profile.interfaceLanguage,
+    role: profile.role || "patient",
+  });
   if (cookieHeader) {
     response.headers.set("set-cookie", cookieHeader);
   }

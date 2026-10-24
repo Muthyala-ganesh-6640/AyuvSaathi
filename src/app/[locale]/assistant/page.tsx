@@ -4,6 +4,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { useEffect, useState, useRef } from "react";
+import { VoiceInput } from "@/components/assistant/VoiceInput";
 import {
   Bot,
   Send,
@@ -29,6 +30,7 @@ export default function AssistantPage() {
   const [input, setInput] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [spokenResponse, setSpokenResponse] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const sampleQuestions = [
@@ -83,6 +85,7 @@ export default function AssistantPage() {
           setConversationId(data.conversationId);
         }
         setMessages((prev) => [...prev, data.message]);
+        setSpokenResponse(data.message.content);
       } else {
         setMessages((prev) => prev.filter((message) => message.id !== userMsg.id));
         toast.error(data.error || "Could not generate response");
@@ -206,6 +209,12 @@ export default function AssistantPage() {
             }}
             className="pt-3 border-t border-[#E9F0F3] flex items-center gap-2"
           >
+            <VoiceInput
+              language={locale}
+              isProcessing={loading}
+              assistantResponseToSpeak={spokenResponse}
+              onTranscriptReady={(transcript) => handleSend(transcript)}
+            />
             <input
               type="text"
               value={input}

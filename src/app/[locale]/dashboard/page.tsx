@@ -3,6 +3,9 @@
 import { useTranslations, useLocale } from "next-intl";
 import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { UniversalPatientQR } from "@/components/qr/UniversalPatientQR";
+import { FamilyProfileSwitcher } from "@/components/family/FamilyProfileSwitcher";
+import { NotificationsDrawer } from "@/components/notifications/NotificationsDrawer";
 import {
   Search,
   Bell,
@@ -30,6 +33,12 @@ import {
   ChevronRight,
   Zap,
   Building2,
+  Stethoscope,
+  Receipt,
+  AlertTriangle,
+  QrCode,
+  MessageSquare,
+  Phone,
 } from "lucide-react";
 import { useCallback, useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -141,6 +150,71 @@ interface DashboardData {
     treatmentPlansCount: number;
     medicalRecordsCount: number;
   };
+  activeProfile?: {
+    id: string;
+    name: string;
+    ayuvSaathiId: string;
+    relationship: string;
+  };
+  familyMembers?: {
+    id: string;
+    name: string;
+    relationship: string;
+    ayuvSaathiId: string;
+    bloodGroup?: string;
+    emergencyContact?: string;
+  }[];
+  connections?: {
+    id: string;
+    patientProfileId: string;
+    professionalId: string;
+    professionalRole: string;
+    professionalName: string;
+    specialization?: string;
+    organizationName: string;
+    department?: string;
+    contactNumber?: string;
+    status: string;
+    lastInteractionAt: string;
+  }[];
+  pharmacyBills?: {
+    id: string;
+    billDate: string;
+    pharmacyName: string;
+    pharmacistName: string;
+    totalAmount: number;
+    paymentStatus: string;
+    items: {
+      medicineName: string;
+      quantity: number;
+      unitPrice: number;
+      totalPrice: number;
+    }[];
+  }[];
+  prescriptions?: {
+    id: string;
+    doctorName: string;
+    clinicHospitalName: string;
+    prescriptionDate: string;
+    diagnosis?: string;
+    items: {
+      medicineName: string;
+      dosage: string;
+      frequency: string;
+      duration: string;
+      instructions: string;
+    }[];
+  }[];
+  notifications?: {
+    id: string;
+    title: string;
+    message: string;
+    type: string;
+    link?: string;
+    read: boolean;
+    createdAt: string;
+  }[];
+  unreadNotificationsCount?: number;
 }
 
 export default function DashboardPage() {
@@ -154,10 +228,15 @@ export default function DashboardPage() {
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeProfileId, setActiveProfileId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<"3" | "6" | "12">("3");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [emergencyModalOpen, setEmergencyModalOpen] = useState(false);
+  const [selectedDoctorForEmergency, setSelectedDoctorForEmergency] = useState<any>(null);
+  const [emergencyText, setEmergencyText] = useState("");
+  const [sendingEmergency, setSendingEmergency] = useState(false);
 
   // Compute Greeting strictly based on Indian Standard Time (IST, UTC+5:30)
   const getIstGreeting = () => {
@@ -175,9 +254,11 @@ export default function DashboardPage() {
     }
   };
 
-  const fetchDashboard = useCallback(async () => {
+  const fetchDashboard = useCallback(async (profileId?: string) => {
     try {
-      const res = await fetch("/api/dashboard");
+      const targetId = profileId !== undefined ? profileId : activeProfileId;
+      const url = targetId ? `/api/dashboard?patientProfileId=${encodeURIComponent(targetId)}` : "/api/dashboard";
+      const res = await fetch(url);
       if (res.status === 401) {
         router.push("/auth/sign-in");
         return;
@@ -185,13 +266,51 @@ export default function DashboardPage() {
       if (res.ok) {
         const json = await res.json();
         setData(json);
+        if (json.activeProfile && !activeProfileId) {
+          setActiveProfileId(json.activeProfile.id);
+        }
       }
     } catch {
       toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, activeProfileId]);
+
+  const handleProfileSwitch = (newProfileId: string) => {
+    setActiveProfileId(newProfileId);
+    setLoading(true);
+    fetchDashboard(newProfileId);
+  };
+
+  const handleSendEmergencyToDoctor = async () => {
+    if (!selectedDoctorForEmergency || !emergencyText.trim()) return;
+    setSendingEmergency(true);
+    try {
+      const res = await fetch("/api/professional/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          patientProfileId: activeProfileId || data?.activeProfile?.id,
+          professionalId: selectedDoctorForEmergency.professionalId,
+          message: emergencyText.trim(),
+          isEmergency: true,
+        }),
+      });
+      const resJson = await res.json();
+      if (resJson.ok) {
+        toast.success("Doctor emergency alert sent to " + selectedDoctorForEmergency.professionalName);
+        setEmergencyText("");
+        setEmergencyModalOpen(false);
+      } else {
+        toast.error(resJson.error || "Failed to send emergency alert.");
+      }
+    } catch {
+      toast.error("Network error sending alert.");
+    } finally {
+      setSendingEmergency(false);
+    }
+  };
 
   useEffect(() => {
     fetchDashboard();
@@ -351,38 +470,45 @@ export default function DashboardPage() {
           <BrandLogo variant="header" href="/dashboard" />
         </div>
 
-        {/* Center: Search input ~550px wide */}
-        <div className="flex-1 max-w-[560px] mx-6">
-          <form onSubmit={handleSearchSubmit} className="relative w-full">
+        {/* Center: Search input & Family Switcher */}
+        <div className="flex-1 max-w-[640px] mx-4 flex items-center gap-3">
+          <form onSubmit={handleSearchSubmit} className="relative flex-1">
             <Search className="w-4 h-4 text-[#7B91A5] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={header("searchPlaceholder")}
-              className="w-full bg-[#F7FAFC] border border-[#E2EDF4] focus:border-[#087F8C] focus:bg-white focus:ring-1 focus:ring-[#087F8C] text-xs sm:text-sm text-[#142E4D] rounded-xl pl-9 pr-16 py-2.5 outline-hidden transition-all placeholder:text-[#7B91A5]"
+              className="w-full bg-[#F7FAFC] border border-[#E2EDF4] focus:border-[#087F8C] focus:bg-white focus:ring-1 focus:ring-[#087F8C] text-xs sm:text-sm text-[#142E4D] rounded-xl pl-9 pr-16 py-2 outline-hidden transition-all placeholder:text-[#7B91A5]"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#7B91A5] border border-[#E2EDF4] bg-white px-1.5 py-0.5 rounded font-medium">
               Ctrl + K
             </span>
           </form>
+
+          {data?.user && (
+            <FamilyProfileSwitcher
+              primaryUser={{
+                id: (data.user as any).id || "primary",
+                displayName: data.user.displayName || "You",
+                ayuvSaathiId: data.activeProfile?.ayuvSaathiId,
+              }}
+              familyMembers={data.familyMembers || []}
+              activeProfileId={activeProfileId || data.activeProfile?.id || (data.user as any).id || ""}
+              onSelectProfile={handleProfileSwitch}
+              onFamilyMemberAdded={() => fetchDashboard(activeProfileId)}
+            />
+          )}
         </div>
 
         {/* Right Section: Notifications, Language, Profile */}
         <div className="flex items-center gap-4 shrink-0">
-          {/* Notification Bell with Badge */}
-          <button
-            type="button"
-            className="relative p-2 text-[#58718B] hover:text-[#142E4D] hover:bg-[#F7FAFC] rounded-xl transition-colors cursor-pointer"
-            title={header("notifications")}
-          >
-            <Bell className="w-5 h-5" />
-            {reminderCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#E03131] text-white text-[9px] font-bold flex items-center justify-center">
-                {reminderCount}
-              </span>
-            )}
-          </button>
+          {/* Notifications Drawer */}
+          <NotificationsDrawer
+            notifications={data?.notifications || []}
+            unreadCount={data?.unreadNotificationsCount ?? 0}
+            onRefresh={() => fetchDashboard(activeProfileId)}
+          />
 
           {/* Language Selector Dropdown */}
           <div className="relative">
@@ -855,10 +981,126 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
+
+              {/* 6. My Connected Doctors (Section 8 of Specification) */}
+              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+                  <div className="flex items-center gap-2">
+                    <Stethoscope className="w-4 h-4 text-[#087F8C]" />
+                    <h3 className="text-xs font-bold text-[#142E4D]">My Connected Doctors</h3>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                    {data?.connections?.filter((c) => c.professionalRole === "doctor").length ?? 0} Connected
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(data?.connections?.filter((c) => c.professionalRole === "doctor") ?? []).length > 0 ? (
+                    data?.connections
+                      ?.filter((c) => c.professionalRole === "doctor")
+                      .map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 flex flex-col justify-between space-y-3"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-[#17344F]">{doc.professionalName}</span>
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
+                                {doc.status}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-600 mt-0.5">
+                              {doc.specialization || "General Physician"} • {doc.organizationName}
+                            </p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">
+                              Last interaction: {new Date(doc.lastInteractionAt).toLocaleDateString()}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60">
+                            <Link
+                              href="/assistant"
+                              className="flex-1 py-1 px-2.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-[11px] font-semibold text-slate-700 text-center transition-colors"
+                            >
+                              Message
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedDoctorForEmergency(doc);
+                                setEmergencyModalOpen(true);
+                              }}
+                              className="flex-1 py-1 px-2.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-[11px] font-bold text-red-700 text-center transition-colors cursor-pointer"
+                            >
+                              Emergency Alert
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="col-span-2 p-4 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                      No doctors connected to this profile yet. Doctors can connect by scanning your Universal Health QR code.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 7. Pharmacy Dispensed Medications & Bills (Section 17 of Specification) */}
+              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-amber-600" />
+                    <h3 className="text-xs font-bold text-[#142E4D]">Pharmacy Bills & Dispensed Medicines</h3>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-semibold">
+                    Purchase Record ≠ Prescription
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {(data?.pharmacyBills ?? []).length > 0 ? (
+                    data?.pharmacyBills?.map((bill) => (
+                      <div
+                        key={bill.id}
+                        className="p-3 rounded-xl border border-slate-200 bg-slate-50/60 flex items-center justify-between text-xs"
+                      >
+                        <div>
+                          <div className="font-bold text-slate-800">
+                            {bill.pharmacyName} • Bill #{bill.id}
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            {new Date(bill.billDate).toLocaleDateString()} • {bill.items?.map((i) => `${i.quantity}x ${i.medicineName}`).join(", ") || "Medicines"}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-mono font-bold text-amber-900 text-sm">
+                            ₹{bill.totalAmount}
+                          </div>
+                          <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
+                            {bill.paymentStatus}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                      No pharmacy purchases recorded for this profile yet.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Right Utility Column: ~352px */}
             <div className="w-full xl:w-[352px] space-y-4 shrink-0">
+              {/* Universal Patient Health QR Card */}
+              <UniversalPatientQR
+                patientProfileId={activeProfileId || data?.activeProfile?.id || (data?.user as any)?.id || "user"}
+                patientName={data?.activeProfile?.name || data?.user?.displayName || "You"}
+                ayuvSaathiId={data?.activeProfile?.ayuvSaathiId || "AS-P-PRIMARY"}
+              />
+
               {/* 1. Medicine Reminders (~260px) */}
               <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs">
                 <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
@@ -1025,6 +1267,75 @@ export default function DashboardPage() {
           </footer>
         </main>
       </div>
+
+      {/* Doctor Emergency Modal with Mandatory Disclaimer */}
+      {emergencyModalOpen && selectedDoctorForEmergency && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-red-200 shadow-xl overflow-hidden p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+                <h3 className="text-sm font-bold text-red-900">
+                  Doctor Emergency Channel
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmergencyModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* MANDATORY DISCLAIMER */}
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-[11px] text-red-900 leading-relaxed space-y-1">
+              <div className="font-bold text-red-800">
+                CRITICAL EMERGENCY NOTICE
+              </div>
+              <p>
+                This alerts <strong>{selectedDoctorForEmergency.professionalName}</strong> directly on their portal.
+                It does <strong>NOT</strong> dispatch ambulances or emergency responders.
+              </p>
+              <p className="font-semibold text-red-800">
+                For immediate life-threatening medical emergencies, dial Indian National Emergency Services:
+                <strong> 108 (Ambulance)</strong> or <strong>112 (National Emergency)</strong>.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                Urgent Message for Dr. {selectedDoctorForEmergency.professionalName}
+              </label>
+              <textarea
+                rows={3}
+                value={emergencyText}
+                onChange={(e) => setEmergencyText(e.target.value)}
+                placeholder="Describe urgent symptom or clinical change..."
+                className="w-full px-3 py-2 text-xs rounded-xl border border-red-200 focus:border-red-600 outline-hidden"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setEmergencyModalOpen(false)}
+                className="flex-1 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendEmergencyToDoctor}
+                disabled={sendingEmergency || !emergencyText.trim()}
+                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                {sendingEmergency ? "Broadcasting..." : "Broadcast Alert"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,46 @@
 export type Locale = "en" | "te" | "hi";
 
+export type UserRole = "patient" | "doctor" | "lab_tech" | "pharmacist";
+
+export interface DoctorProfile {
+  medicalRegistrationNumber: string;
+  specialization: string;
+  qualification: string;
+  experienceYears?: number;
+  hospitalClinicName: string;
+  hospitalClinicAddress: string;
+  department?: string;
+  professionalEmail?: string;
+  contactNumber: string;
+  consultationAvailability?: string;
+  verificationStatus: "verified" | "pending" | "unverified";
+}
+
+export interface LabTechProfile {
+  technicianId: string;
+  qualification: string;
+  specialization?: string;
+  labName: string;
+  labRegistration?: string;
+  labAddress: string;
+  contactNumber: string;
+  professionalEmail?: string;
+  department?: string;
+  designation?: string;
+  verificationStatus: "verified" | "pending" | "unverified";
+}
+
+export interface PharmacistProfile {
+  licenseNumber: string;
+  qualification: string;
+  pharmacyName: string;
+  pharmacyAddress: string;
+  contactNumber: string;
+  professionalEmail?: string;
+  designation?: string;
+  verificationStatus: "verified" | "pending" | "unverified";
+}
+
 export type DocumentCategory =
   | "lab_report"
   | "prescription"
@@ -27,6 +68,12 @@ export interface Profile {
   email: string;
   passwordHash: string;
   displayName: string;
+  role?: UserRole;
+  avatarUrl?: string;
+  ayuvSaathiId?: string;
+  doctorProfile?: DoctorProfile;
+  labTechProfile?: LabTechProfile;
+  pharmacistProfile?: PharmacistProfile;
   interfaceLanguage: Locale;
   aiLanguage: Locale;
   timezone: string;
@@ -202,6 +249,151 @@ export interface ChatMessage {
   createdAt: string;
 }
 
+export type FamilyRelationship = "self" | "father" | "mother" | "spouse" | "child" | "other";
+
+export interface FamilyMemberProfile {
+  id: string;
+  primaryUserId: string;
+  name: string;
+  relationship: FamilyRelationship;
+  gender?: "male" | "female" | "other";
+  dateOfBirth?: string;
+  bloodGroup?: string;
+  emergencyContact?: string;
+  ayuvSaathiId: string; // e.g. AS-P-XXXX
+  avatarUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PatientQRToken {
+  token: string;
+  patientProfileId: string;
+  primaryUserId: string;
+  patientName: string;
+  ayuvSaathiId: string;
+  expiresAt: string;
+  status: "active" | "revoked";
+  createdAt: string;
+}
+
+export interface HealthcareConnection {
+  id: string;
+  patientProfileId: string;
+  primaryUserId: string;
+  professionalId: string;
+  professionalRole: "doctor" | "lab_tech" | "pharmacist";
+  professionalName: string;
+  specialization?: string;
+  organizationName: string;
+  department?: string;
+  contactNumber?: string;
+  status: "active" | "revoked" | "pending";
+  permissions: {
+    viewRecords: boolean;
+    viewPrescriptions: boolean;
+    createPrescription: boolean;
+    uploadReports: boolean;
+    dispenseMedicines: boolean;
+  };
+  lastInteractionAt: string;
+  createdAt: string;
+}
+
+export interface PharmacyBillItem {
+  medicineName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  instructions?: string;
+}
+
+export interface PharmacyBill {
+  id: string;
+  patientProfileId: string;
+  primaryUserId: string;
+  pharmacistId: string;
+  pharmacistName: string;
+  pharmacyName: string;
+  billDate: string;
+  items: PharmacyBillItem[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  totalAmount: number;
+  prescriptionId?: string;
+  prescribingDoctorName?: string;
+  paymentStatus: "paid" | "pending";
+  notes?: string;
+  createdAt: string;
+}
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  patientProfileId: string;
+  title: string;
+  message: string;
+  type: "prescription" | "lab_report" | "pharmacy_bill" | "connection" | "emergency" | "general";
+  link?: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface PrescriptionItem {
+  medicineName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions: string;
+}
+
+export interface DoctorPrescription {
+  id: string;
+  patientProfileId: string;
+  primaryUserId: string;
+  doctorId: string;
+  doctorName: string;
+  clinicHospitalName: string;
+  specialization?: string;
+  diagnosis?: string;
+  items: PrescriptionItem[];
+  prescriptionDate: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface ProfessionalMessage {
+  id: string;
+  patientProfileId: string;
+  primaryUserId: string;
+  professionalId: string;
+  senderId: string;
+  senderRole: UserRole;
+  senderName: string;
+  message: string;
+  isEmergency?: boolean;
+  createdAt: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorId: string;
+  actorRole: UserRole;
+  actorName: string;
+  patientProfileId: string;
+  action:
+    | "qr_scanned"
+    | "connection_created"
+    | "report_uploaded"
+    | "prescription_created"
+    | "bill_generated"
+    | "emergency_ping"
+    | "profile_switched";
+  details: Record<string, unknown>;
+  timestamp: string;
+}
+
 export interface DatabaseShape {
   profiles: Profile[];
   resetTokens: ResetToken[];
@@ -216,6 +408,14 @@ export interface DatabaseShape {
   appointments: Appointment[];
   conversations: Conversation[];
   messages: ChatMessage[];
+  familyMembers: FamilyMemberProfile[];
+  qrTokens: PatientQRToken[];
+  connections: HealthcareConnection[];
+  pharmacyBills: PharmacyBill[];
+  notifications: AppNotification[];
+  prescriptions: DoctorPrescription[];
+  auditLogs: AuditLogEntry[];
+  professionalMessages: ProfessionalMessage[];
 }
 
 const DEFAULT_PROFILES: Profile[] = [
@@ -280,6 +480,20 @@ const DEFAULT_PROFILES: Profile[] = [
     email: "doctor@ayuvsaathi.in",
     passwordHash: "$2b$10$pS//Q2cb/3shHD1KZ.kOlunImVnZ4MoIAcc0j3qq.XnmY9580yn3G",
     displayName: "Dr. K. Srinivas Rao, MD",
+    role: "doctor",
+    doctorProfile: {
+      medicalRegistrationNumber: "MCI-48921-A",
+      specialization: "General Physician & Cardiologist",
+      qualification: "MBBS, MD (Medicine)",
+      experienceYears: 14,
+      hospitalClinicName: "Apollo Health City",
+      hospitalClinicAddress: "Road No. 72, Jubilee Hills, Hyderabad",
+      department: "Internal Medicine",
+      professionalEmail: "dr.srinivas@apollohealth.org",
+      contactNumber: "+91 98490 12345",
+      consultationAvailability: "Mon - Sat: 10:00 AM - 4:00 PM",
+      verificationStatus: "verified",
+    },
     interfaceLanguage: "en",
     aiLanguage: "en",
     timezone: "Asia/Kolkata",
@@ -320,5 +534,13 @@ export function emptyDatabase(): DatabaseShape {
     appointments: [],
     conversations: [],
     messages: [],
+    familyMembers: [],
+    qrTokens: [],
+    connections: [],
+    pharmacyBills: [],
+    notifications: [],
+    prescriptions: [],
+    auditLogs: [],
+    professionalMessages: [],
   };
 }

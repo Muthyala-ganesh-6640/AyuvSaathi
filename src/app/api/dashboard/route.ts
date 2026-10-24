@@ -13,14 +13,48 @@ export async function GET(request: NextRequest) {
   await ensureUpcomingDoses(user);
   const tz = user.timezone || "Asia/Kolkata";
   const today = localDateKey(new Date(), tz);
-  const [documents, medications, doses, timeline, appointments, observations, visits] = await Promise.all([
-    store.listDocuments(user.id),
-    store.listMedications(user.id),
-    store.listDoses(user.id),
-    store.listTimeline(user.id),
-    store.listAppointments(user.id),
-    store.listObservations(user.id),
-    store.listVisits(user.id),
+  const requestedProfileId = request.nextUrl.searchParams.get("patientProfileId") || request.headers.get("x-patient-profile-id") || user.id;
+
+  // Verify family member access if requested profile is not the primary user
+  let activeProfileName = user.displayName;
+  let activeAyuvSaathiId = user.ayuvSaathiId || `AS-P-${user.id.slice(0, 5).toUpperCase()}`;
+  let activeRelationship = "self";
+
+  if (requestedProfileId !== user.id) {
+    const fam = await store.getFamilyMember(requestedProfileId);
+    if (fam && fam.primaryUserId === user.id) {
+      activeProfileName = fam.name;
+      activeAyuvSaathiId = fam.ayuvSaathiId;
+      activeRelationship = fam.relationship;
+    }
+  }
+
+  const [
+    documents,
+    medications,
+    doses,
+    timeline,
+    appointments,
+    observations,
+    visits,
+    connections,
+    pharmacyBills,
+    prescriptions,
+    familyMembers,
+    notifications,
+  ] = await Promise.all([
+    store.listDocuments(requestedProfileId),
+    store.listMedications(requestedProfileId),
+    store.listDoses(requestedProfileId),
+    store.listTimeline(requestedProfileId),
+    store.listAppointments(requestedProfileId),
+    store.listObservations(requestedProfileId),
+    store.listVisits(requestedProfileId),
+    store.listConnections(requestedProfileId),
+    store.listPharmacyBills(requestedProfileId),
+    store.listPrescriptions(requestedProfileId),
+    store.listFamilyMembers(user.id),
+    store.listNotifications(user.id, requestedProfileId),
   ]);
   const todaysDoses = doses
     .filter((d) => d.scheduledDate === today)
@@ -48,6 +82,18 @@ export async function GET(request: NextRequest) {
 
   return Response.json({
     user: publicProfile(user),
+    activeProfile: {
+      id: requestedProfileId,
+      name: activeProfileName,
+      ayuvSaathiId: activeAyuvSaathiId,
+      relationship: activeRelationship,
+    },
+    familyMembers,
+    connections,
+    pharmacyBills: pharmacyBills.slice(0, 5),
+    prescriptions: prescriptions.slice(0, 5),
+    notifications: notifications.slice(0, 10),
+    unreadNotificationsCount: notifications.filter((n) => !n.read).length,
     services: serviceStatus(),
     today,
     medicines: todaysDoses.map((d) => ({

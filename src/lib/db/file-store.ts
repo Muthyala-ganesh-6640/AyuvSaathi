@@ -17,6 +17,14 @@ import {
   ResetToken,
   TimelineEvent,
   VisitSummary,
+  FamilyMemberProfile,
+  PatientQRToken,
+  HealthcareConnection,
+  PharmacyBill,
+  AppNotification,
+  DoctorPrescription,
+  AuditLogEntry,
+  ProfessionalMessage,
   emptyDatabase,
 } from "./types";
 
@@ -94,6 +102,14 @@ function mergeWithDefaults(parsed: Partial<DatabaseShape>): DatabaseShape {
     }
   }
   merged.profiles = Array.from(byEmail.values());
+  merged.familyMembers = Array.isArray(parsed.familyMembers) ? parsed.familyMembers : [];
+  merged.qrTokens = Array.isArray(parsed.qrTokens) ? parsed.qrTokens : [];
+  merged.connections = Array.isArray(parsed.connections) ? parsed.connections : [];
+  merged.pharmacyBills = Array.isArray(parsed.pharmacyBills) ? parsed.pharmacyBills : [];
+  merged.notifications = Array.isArray(parsed.notifications) ? parsed.notifications : [];
+  merged.prescriptions = Array.isArray(parsed.prescriptions) ? parsed.prescriptions : [];
+  merged.auditLogs = Array.isArray(parsed.auditLogs) ? parsed.auditLogs : [];
+  merged.professionalMessages = Array.isArray(parsed.professionalMessages) ? parsed.professionalMessages : [];
   return merged;
 }
 
@@ -456,6 +472,122 @@ export const store = {
       db.messages.push(row);
       return row;
     }),
+  listFamilyMembers: (primaryUserId: string) =>
+    query((db) => db.familyMembers.filter((m) => m.primaryUserId === primaryUserId)),
+  getFamilyMember: (id: string) =>
+    query((db) => db.familyMembers.find((m) => m.id === id) ?? null),
+  saveFamilyMember: (row: FamilyMemberProfile) =>
+    mutate((db) => {
+      const i = db.familyMembers.findIndex((m) => m.id === row.id);
+      if (i >= 0) db.familyMembers[i] = row;
+      else db.familyMembers.push(row);
+      return row;
+    }),
+  deleteFamilyMember: (id: string, primaryUserId: string) =>
+    mutate((db) => {
+      const before = db.familyMembers.length;
+      db.familyMembers = db.familyMembers.filter((m) => !(m.id === id && m.primaryUserId === primaryUserId));
+      return db.familyMembers.length < before;
+    }),
+  createQRToken: (row: PatientQRToken) =>
+    mutate((db) => {
+      db.qrTokens = db.qrTokens.filter((t) => t.patientProfileId !== row.patientProfileId);
+      db.qrTokens.push(row);
+      return row;
+    }),
+  getQRToken: (token: string) =>
+    query((db) => db.qrTokens.find((t) => t.token === token && t.status === "active" && new Date(t.expiresAt).getTime() > Date.now()) ?? null),
+  revokeQRToken: (token: string) =>
+    mutate((db) => {
+      const t = db.qrTokens.find((item) => item.token === token);
+      if (t) t.status = "revoked";
+      return Boolean(t);
+    }),
+  listConnections: (patientProfileId: string) =>
+    query((db) => db.connections.filter((c) => c.patientProfileId === patientProfileId)),
+  listProfessionalConnections: (professionalId: string) =>
+    query((db) => db.connections.filter((c) => c.professionalId === professionalId)),
+  getConnection: (id: string) =>
+    query((db) => db.connections.find((c) => c.id === id) ?? null),
+  findConnection: (patientProfileId: string, professionalId: string) =>
+    query((db) => db.connections.find((c) => c.patientProfileId === patientProfileId && c.professionalId === professionalId) ?? null),
+  saveConnection: (row: HealthcareConnection) =>
+    mutate((db) => {
+      const i = db.connections.findIndex((c) => c.id === row.id);
+      if (i >= 0) db.connections[i] = row;
+      else db.connections.push(row);
+      return row;
+    }),
+  updateConnectionStatus: (id: string, status: HealthcareConnection["status"]) =>
+    mutate((db) => {
+      const c = db.connections.find((item) => item.id === id);
+      if (c) c.status = status;
+      return c ?? null;
+    }),
+  listPharmacyBills: (patientProfileId: string) =>
+    query((db) => db.pharmacyBills.filter((b) => b.patientProfileId === patientProfileId || b.primaryUserId === patientProfileId).sort((a, b) => b.billDate.localeCompare(a.billDate))),
+  listPharmacistBills: (pharmacistId: string) =>
+    query((db) => db.pharmacyBills.filter((b) => b.pharmacistId === pharmacistId).sort((a, b) => b.billDate.localeCompare(a.billDate))),
+  getPharmacyBill: (id: string) =>
+    query((db) => db.pharmacyBills.find((b) => b.id === id) ?? null),
+  savePharmacyBill: (row: PharmacyBill) =>
+    mutate((db) => {
+      const i = db.pharmacyBills.findIndex((b) => b.id === row.id);
+      if (i >= 0) db.pharmacyBills[i] = row;
+      else db.pharmacyBills.push(row);
+      return row;
+    }),
+  listPrescriptions: (patientProfileId: string) =>
+    query((db) => db.prescriptions.filter((p) => p.patientProfileId === patientProfileId || p.primaryUserId === patientProfileId).sort((a, b) => b.prescriptionDate.localeCompare(a.prescriptionDate))),
+  listDoctorPrescriptions: (doctorId: string) =>
+    query((db) => db.prescriptions.filter((p) => p.doctorId === doctorId).sort((a, b) => b.prescriptionDate.localeCompare(a.prescriptionDate))),
+  getPrescription: (id: string) =>
+    query((db) => db.prescriptions.find((p) => p.id === id) ?? null),
+  savePrescription: (row: DoctorPrescription) =>
+    mutate((db) => {
+      const i = db.prescriptions.findIndex((p) => p.id === row.id);
+      if (i >= 0) db.prescriptions[i] = row;
+      else db.prescriptions.push(row);
+      return row;
+    }),
+  listNotifications: (userId: string, patientProfileId?: string) =>
+    query((db) => db.notifications.filter((n) => n.userId === userId && (!patientProfileId || n.patientProfileId === patientProfileId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
+  createNotification: (row: AppNotification) =>
+    mutate((db) => {
+      db.notifications.unshift(row);
+      return row;
+    }),
+  markNotificationRead: (id: string, userId: string) =>
+    mutate((db) => {
+      const n = db.notifications.find((item) => item.id === id && item.userId === userId);
+      if (n) n.read = true;
+      return Boolean(n);
+    }),
+  markAllNotificationsRead: (userId: string) =>
+    mutate((db) => {
+      let count = 0;
+      db.notifications.forEach((n) => {
+        if (n.userId === userId && !n.read) {
+          n.read = true;
+          count++;
+        }
+      });
+      return count;
+    }),
+  listProfessionalMessages: (patientProfileId: string, professionalId?: string) =>
+    query((db) => db.professionalMessages.filter((m) => m.patientProfileId === patientProfileId && (!professionalId || m.professionalId === professionalId)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))),
+  saveProfessionalMessage: (row: ProfessionalMessage) =>
+    mutate((db) => {
+      db.professionalMessages.push(row);
+      return row;
+    }),
+  logAudit: (row: AuditLogEntry) =>
+    mutate((db) => {
+      db.auditLogs.unshift(row);
+      return row;
+    }),
+  listAuditLogs: (patientProfileId: string) =>
+    query((db) => db.auditLogs.filter((a) => a.patientProfileId === patientProfileId).sort((a, b) => b.timestamp.localeCompare(a.timestamp))),
   replaceOwnerData: (ownerId: string, patch: Partial<DatabaseShape>) =>
     mutate((db) => {
       (Object.keys(patch) as (keyof DatabaseShape)[]).forEach((key) => {

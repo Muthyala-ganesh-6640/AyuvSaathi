@@ -6,7 +6,7 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { getEnv } from "@/lib/env";
 import { getDataDir, store } from "@/lib/db/file-store";
-import type { Profile, Locale } from "@/lib/db/types";
+import type { Profile, Locale, UserRole } from "@/lib/db/types";
 
 export const SESSION_COOKIE = "arogya_session";
 
@@ -65,6 +65,8 @@ export async function createSession(userOrId: Profile | string): Promise<{ token
   if (profile) {
     claims.email = profile.email;
     claims.displayName = profile.displayName;
+    claims.role = profile.role || "patient";
+    claims.ayuvSaathiId = profile.ayuvSaathiId;
     claims.interfaceLanguage = profile.interfaceLanguage || "en";
     claims.aiLanguage = profile.aiLanguage || "en";
     claims.timezone = profile.timezone || "Asia/Kolkata";
@@ -124,6 +126,8 @@ interface SessionPayload {
   sub: string;
   email?: string;
   displayName?: string;
+  role?: string;
+  ayuvSaathiId?: string;
   interfaceLanguage?: string;
   aiLanguage?: string;
   timezone?: string;
@@ -195,6 +199,8 @@ export async function requireUser(request?: NextRequest): Promise<Profile> {
     email,
     passwordHash: "",
     displayName: payload.displayName || email.split("@")[0],
+    role: (payload.role as UserRole) || "patient",
+    ayuvSaathiId: payload.ayuvSaathiId,
     interfaceLanguage: (payload.interfaceLanguage || "en") as Locale,
     aiLanguage: (payload.aiLanguage || "en") as Locale,
     timezone: payload.timezone || "Asia/Kolkata",
@@ -220,6 +226,12 @@ export function publicProfile(profile: Profile) {
     id: profile.id,
     email: profile.email,
     displayName: profile.displayName,
+    role: profile.role || "patient",
+    ayuvSaathiId: profile.ayuvSaathiId,
+    avatarUrl: profile.avatarUrl,
+    doctorProfile: profile.doctorProfile,
+    labTechProfile: profile.labTechProfile,
+    pharmacistProfile: profile.pharmacistProfile,
     interfaceLanguage: profile.interfaceLanguage,
     aiLanguage: profile.aiLanguage,
     timezone: profile.timezone,

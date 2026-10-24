@@ -30,7 +30,15 @@ export default function SignInPage() {
       } else {
         toast.success("Welcome back! Redirecting...");
         const targetLocale = data.language || currentLocale || "en";
-        window.location.href = `/${targetLocale}/dashboard`;
+        if (data.role === "doctor") {
+          window.location.href = `/${targetLocale}/doctor`;
+        } else if (data.role === "lab_tech") {
+          window.location.href = `/${targetLocale}/lab`;
+        } else if (data.role === "pharmacist") {
+          window.location.href = `/${targetLocale}/pharmacy`;
+        } else {
+          window.location.href = `/${targetLocale}/dashboard`;
+        }
       }
     } catch {
       toast.error("Network error during sign in.");
@@ -118,6 +126,15 @@ export default function SignInPage() {
               className="font-semibold text-[#087F72] hover:underline ml-1"
             >
               {common("signUp")}
+            </Link>
+          </div>
+
+          <div className="pt-1 text-center text-xs">
+            <Link
+              href="/auth/role-select"
+              className="text-[#17344F] hover:text-[#087F72] font-medium transition-colors"
+            >
+              Healthcare Professional? Select your portal →
             </Link>
           </div>
         </div>

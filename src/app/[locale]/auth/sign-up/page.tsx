@@ -164,6 +164,15 @@ export default function SignUpPage() {
               {common("signIn")}
             </Link>
           </div>
+
+          <div className="pt-1 text-center text-xs">
+            <Link
+              href="/auth/role-select"
+              className="text-[#17344F] hover:text-[#087F72] font-medium transition-colors"
+            >
+              Signing up as a Doctor, Lab Tech, or Pharmacist? Select role →
+            </Link>
+          </div>
         </div>
       </div>
     </AppShell>
