@@ -24,10 +24,10 @@ export function groundedAnswer(
   const documents = context.documents || [];
 
   const contextStr = [
-    ...observations.map((o) => o.name),
-    ...medications.map((m) => m.name),
-    ...documents.map((d) => d.displayName),
-    ...visits.map((v) => v.title),
+    ...observations.map((o) => `${o.name} ${o.value} ${o.unit || ""}`),
+    ...medications.map((m) => `${m.name} ${m.strength || ""} ${m.instructions || ""}`),
+    ...documents.map((d) => `${d.displayName} ${d.category}`),
+    ...visits.map((v) => `${v.title || ""} ${v.content || ""}`),
   ].join(" ");
 
   // Pre-flight clinical guardrail check
@@ -84,9 +84,19 @@ export function groundedAnswer(
     q.includes("prescription") ||
     q.includes("medication") ||
     q.includes("dose") ||
+    q.includes("dosage") ||
     q.includes("tablet") ||
     q.includes("pill") ||
     q.includes("timing") ||
+    q.includes("rx") ||
+    q.includes("ప్రిస్క్రిప్షన్") ||
+    q.includes("మందులు") ||
+    q.includes("మందు") ||
+    q.includes("మాత్రలు") ||
+    q.includes("पर्चा") ||
+    q.includes("दवा") ||
+    q.includes("दवाएं") ||
+    q.includes("दवाइयां") ||
     matchedMeds.length > 0;
 
   const isAskingDoctorSummary =
@@ -96,14 +106,32 @@ export function groundedAnswer(
     q.includes("visit") ||
     q.includes("advice") ||
     q.includes("question") ||
+    q.includes("सलाह") ||
+    q.includes("సలహా") ||
     matchedVisits.length > 0;
+
+  const isAskingGeneralRecords =
+    q.includes("record") ||
+    q.includes("health records") ||
+    q.includes("medical records") ||
+    q.includes("my records") ||
+    q.includes("all records") ||
+    q.includes("overview") ||
+    q.includes("రకార్డులు") ||
+    q.includes("రికార్డు") ||
+    q.includes("రికార్డులు") ||
+    q.includes("రిపోర్టులు") ||
+    q.includes("రిపోర్ట్") ||
+    q.includes("రికార్డ్") ||
+    q.includes("रिकॉर्ड") ||
+    q.includes("रिकॉर्ड्स");
 
   const responseSections: string[] = [];
 
   // 1. Lab Observations Section
   const obsPool = matchedObs.length
     ? matchedObs
-    : !isAskingPrescription && !isAskingDoctorSummary
+    : isAskingGeneralRecords || (!isAskingPrescription && !isAskingDoctorSummary)
       ? deduplicatedObs.slice(0, 8)
       : [];
 
@@ -120,7 +148,12 @@ export function groundedAnswer(
   }
 
   // 2. Medications & Prescriptions Section
-  const medPool = matchedMeds.length ? matchedMeds : isAskingPrescription ? medications : [];
+  const medPool = matchedMeds.length
+    ? matchedMeds
+    : (isAskingPrescription || isAskingGeneralRecords)
+      ? medications
+      : [];
+
   if (medPool.length) {
     const medLines = medPool.map((m) => {
       return `• ${m.name} (${m.strength}): ${m.instructions} [Status: ${m.status}]`;
@@ -129,7 +162,12 @@ export function groundedAnswer(
   }
 
   // 3. Doctor Summaries & Visit Advice Section
-  const visitPool = matchedVisits.length ? matchedVisits : isAskingDoctorSummary ? visits : [];
+  const visitPool = matchedVisits.length
+    ? matchedVisits
+    : (isAskingDoctorSummary || isAskingGeneralRecords)
+      ? visits
+      : [];
+
   if (visitPool.length) {
     const visitLines = visitPool.map((v) => {
       const qs = (v.questions && v.questions.length) ? `\n  Suggested Questions for Doctor: ${v.questions.join("; ")}` : "";

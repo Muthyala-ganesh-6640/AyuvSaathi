@@ -1,9 +1,11 @@
 /**
  * AyuvSaathi AI Clinical Guardrails
  * 
- * Enforces strict medical and health-only domain restrictions.
- * Rejects non-medical queries (coding, politics, general trivia, finance, entertainment, prompt injection)
- * while allowing queries about uploaded reports, prescriptions, symptoms, treatments, vitals, and wellness.
+ * Enforces strict medical and health-only domain restrictions:
+ * Responds ONLY to medical related issues along with prescriptions, medical records, and diagnostic reports.
+ * Restricts all non-medical data and non-medical queries (coding, politics, general trivia, finance, entertainment, prompt injection)
+ * while ensuring valid clinical questions, prescriptions, patient health records, and reports (in English, Telugu, and Hindi)
+ * are accurately recognized and answered without interrupting any API calls.
  */
 
 export interface GuardrailResult {
@@ -13,8 +15,78 @@ export interface GuardrailResult {
   refusalMessage: string;
 }
 
+// Explicit non-medical patterns and deceptive false-positive phrases
+const NON_MEDICAL_PATTERNS = [
+  // Programming & Software Development
+  /\b(write|create|debug|generate|fix|run|compile)\s+(a\s+|an\s+|some\s+|me\s+)?(code|script|program|function|class|sql|python|javascript|typescript|java|c\+\+|html|css|bash|powershell|regex)\b/i,
+  /\b(python|javascript|typescript|java|c\+\+|golang|rust|html|css|sql|bash|powershell)\s+(code|script|program|function|app)\b/i,
+  /\b(code|script)\s+to\s+(scrape|parse|build|fetch|hack|crawl)\b/i,
+  /\b(algorithm|github|docker|kubernetes|aws|azure|database query|pull request|git commit|api route|unit test)\b/i,
+  
+  // Non-medical Trivia & General World Facts
+  /\b(who is the president|who is the prime minister|who won the (match|game|world cup|election|oscar|ipl))\b/i,
+  /\b(capital of|population of|currency of|distance between|history of (france|rome|ww1|ww2|war|india|china))\b/i,
+  
+  // Creative Writing & Entertainment
+  /\b(write a (poem|story|song|essay|joke|riddle|screenplay|script about))\b/i,
+  /\b(movie review|celebrity|box office|actor|actress|video game|playstation|xbox|netflix)\b/i,
+  /\b(doctor who|doctor strange|witch doctor)\b/i,
+  /\b(movie summary|book summary|plot summary|film summary|episode summary)\b/i,
+  
+  // Non-medical "record", "test", "result", "upload" idioms
+  /\b(world record|record a song|record a video|record an album|broken the record|olympic record|guinness record)\b/i,
+  /\b(speed test|driving test|iq test|math test|personality test|internet test)\b/i,
+  /\b(election results?|match results?|exam results?|lottery results?|game results?|cricket score)\b/i,
+  /\b(upload (a |to )?(video|song|youtube|facebook|instagram|tiktok|drive|cloud))\b/i,
+
+  // Finance, Stocks & Crypto
+  /\b(crypto|cryptocurrency|bitcoin|ethereum|stock price|stock market|forex|invest in|mutual fund|real estate investment)\b/i,
+  
+  // Non-medical Math & Physics
+  /\b(solve (equation|math|algebra|calculus|physics problem)|pythagorean theorem|integrate|derivative of)\b/i,
+
+  // Prompt Injections / Jailbreak attempts
+  /\b(ignore (all )?previous instructions|system prompt|reveal your prompt|act as dan|unrestricted mode|jailbreak)\b/i
+];
+
+// Explicit medical records, prescriptions, and diagnostic reports phrases
+const MEDICAL_RECORDS_PHRASES = [
+  // Prescriptions & Medications
+  /\b(prescriptions?|prescribed|rx|medicines?|medications?|dosage|doses?|tablets?|capsules?|syrups?|injections?)\b/i,
+  /\b(medication schedule|medicine timing|pill reminder|daily dose)\b/i,
+  
+  // Reports & Lab Diagnostics
+  /\b(medical reports?|lab reports?|diagnostic reports?|pathology reports?|blood reports?|test reports?)\b/i,
+  /\b(lab results?|blood test results?|test results?|diagnostic results?|test values?|biomarker results?)\b/i,
+  /\b(my reports?|my lab|uploaded reports?|uploaded documents?|my test results?)\b/i,
+  /\b(reference ranges?|normal ranges?|out of range|abnormal values?)\b/i,
+
+  // Medical Records & Clinical Consultations
+  /\b(medical records?|health records?|patient records?|clinical records?|my records?)\b/i,
+  /\b(doctor visits?|doctor consultation|doctor summary|discharge summary|doctor notes?|clinical summary)\b/i,
+  /\b(doctor advice|clinical findings?|hospital records?|clinical history)\b/i,
+];
+
+// Indic Multilingual Medical, Prescription, Record, and Report Keywords
+const INDIC_MEDICAL_KEYWORDS = [
+  // Telugu (తెలుగు) - Reports, Prescriptions, Records, Health
+  "ప్రిస్క్రిప్షన్", "ప్రిస్క్రిప్షన్లు", "మందుల చీటి", "మందులు", "మందు", "మాత్రలు",
+  "రిపోర్ట్", "రిపోర్టు", "రిపోర్టులు", "ల్యాబ్ రిపోర్టు", "రక్త పరీక్ష", "పరీక్ష ఫలితాలు", "పరీక్ష",
+  "రికార్డు", "రికార్డులు", "వైద్య రికార్డులు", "ఆరోగ్య రికార్డులు", "డిశ్చార్జ్ సమ్మరీ",
+  "వైద్యుల సలహా", "డాక్టర్ సలహా", "డాక్టర్", "ఆరోగ్యం", "గుండె", "రక్తం", "చక్కెర",
+  "షుగర్", "గ్లూకోజ్", "బీపీ", "హిమోగ్లోబిన్", "జ్వరం", "తలనొప్పి", "కడుపునొప్పి", "విలువ",
+
+  // Hindi (हिन्दी) - Reports, Prescriptions, Records, Health
+  "पर्चा", "प्रिस्क्रिप्शन", "दवा", "दवाएं", "दवाइयां", "गोली", "खुराक",
+  "रिपोर्ट", "जांच रिपोर्ट", "लैब रिपोर्ट", "मेडिकल रिपोर्ट", "रक्त जांच", "परीक्षण", "नतीजे", "परिणाम",
+  "रिकॉर्ड", "रिकॉर्ड्स", "स्वास्थ्य रिकॉर्ड", "मेडिकल रिकॉर्ड", "डिस्चार्ज समरी",
+  "डॉक्टर की सलाह", "डॉक्टर", "स्वास्थ्य", "दिल", "खून", "रक्त", "शुगर",
+  "ग्लूकोज", "बीपी", "हीमोग्लोबिन", "बुखार", "सिरदर्द", "दर्द", "जांच", "मान"
+];
+
+// General medical vocabulary
 const MEDICAL_KEYWORDS = [
-  // General medical & clinical
+  // General clinical & practice
   "health", "medical", "medicine", "doctor", "physician", "hospital", "clinic", "nurse",
   "patient", "disease", "illness", "condition", "disorder", "syndrome", "symptom", "diagnosis",
   "prognosis", "treatment", "therapy", "surgery", "operation", "admitted", "discharge",
@@ -22,7 +94,7 @@ const MEDICAL_KEYWORDS = [
   "ointment", "drops", "pills", "medication", "drug", "antibiotic", "painkiller", "steroid",
   "side effect", "adverse", "contraindication", "interaction",
 
-  // Reports & lab diagnostics
+  // Diagnostic tests & biomarkers
   "report", "lab", "test", "result", "scan", "x-ray", "xray", "mri", "ct scan", "ultrasound",
   "ecg", "ekg", "eeg", "biopsy", "pathology", "culture", "cbc", "complete blood count",
   "hemoglobin", "hb", "wbc", "rbc", "platelet", "platelets", "glucose", "sugar", "fasting",
@@ -55,43 +127,21 @@ const MEDICAL_KEYWORDS = [
   "muscle", "artery", "vein", "blood", "skin", "eye", "ear", "nose", "throat", "chest",
   "abdomen", "back", "neck", "shoulder", "knee", "foot", "leg", "arm", "hand",
 
-  // Wellness & Lifestyle
-  "diet", "nutrition", "food", "calorie", "protein", "carbohydrate", "fat", "fiber", "water",
-  "hydration", "sleep", "exercise", "workout", "physical activity", "walking", "yoga", "stress",
-  "mental health", "lifestyle", "habit", "smoking", "alcohol", "bmi", "weight", "obesity",
-  "immunity", "supplement", "vitamin", "mineral",
-
-  // AyuvSaathi Records & Platform
+  // Patient records & platform
   "uploaded", "my report", "my reports", "my prescription", "my medicine", "my records",
   "my doctor", "my visit", "my results", "ayuvsaathi", "timeline", "reminder", "dose",
+  "discharge summary", "doctor summary", "consultation",
 
-  // Multilingual Medical Keywords (Telugu & Hindi)
-  "హిమోగ్లోబిన్", "రక్తం", "చక్కెర", "షుగర్", "గ్లూకోజ్", "బీపీ", "గుండె", "మందు", "మందులు", "ఆరోగ్యం", "డాక్టర్", "ల్యాబ్", "రిపోర్ట్", "రిపోర్టు", "జ్వరం", "తలనొప్పి", "కడుపునొప్పి", "పరీక్ష", "విలువ",
-  "हीमोग्लोबिन", "रक्त", "खून", "शुगर", "ग्लूकोज", "बीपी", "दवा", "दवाएं", "दवाइयां", "स्वास्थ्य", "डॉक्टर", "रिपोर्ट", "जांच", "बुखार", "सिरदर्द", "दर्द", "परीक्षण", "मान"
+  // Include Indic keywords in the general keyword set
+  ...INDIC_MEDICAL_KEYWORDS
 ];
 
-const NON_MEDICAL_PATTERNS = [
-  // Programming & Tech
-  /\b(write|create|debug|generate|fix|run|compile)\s+(code|script|program|function|class|sql|python|javascript|typescript|java|c\+\+|html|css|bash|powershell|regex)\b/i,
-  /\b(algorithm|github|docker|kubernetes|aws|azure|database query|pull request|git commit|api route)\b/i,
-  
-  // Non-medical trivia & General facts
-  /\b(who is the president|who is the prime minister|who won the (match|game|world cup|election|oscar))\b/i,
-  /\b(capital of|population of|currency of|distance between|history of (france|rome|ww1|ww2|war))\b/i,
-  
-  // Creative Writing & Entertainment
-  /\b(write a (poem|story|song|essay|joke|riddle|screenplay|script about))\b/i,
-  /\b(movie review|celebrity|box office|actor|actress|video game|playstation|xbox)\b/i,
-  
-  // Finance & Economics
-  /\b(crypto|cryptocurrency|bitcoin|ethereum|stock price|stock market|forex|invest in|mutual fund|real estate investment)\b/i,
-  
-  // Non-medical Academic & Math
-  /\b(solve (equation|math|algebra|calculus|physics problem)|pythagorean theorem|integrate|derivative of)\b/i,
-
-  // Prompt Injections / Jailbreak attempts
-  /\b(ignore (all )?previous instructions|system prompt|reveal your prompt|act as dan|unrestricted mode|jailbreak)\b/i
-];
+const COMMON_NON_CLINICAL_TOKENS = new Set([
+  "data", "from", "with", "this", "that", "have", "make", "what", "when", "where",
+  "your", "name", "file", "page", "user", "type", "date", "time", "text", "show",
+  "tell", "give", "help", "good", "some", "more", "like", "want", "need", "about",
+  "write", "code", "script", "scrape", "websites", "python", "javascript"
+]);
 
 const GREETINGS = [
   "hi", "hello", "hey", "good morning", "good afternoon", "good evening", "namaste", "vanakkam", "help", "who are you"
@@ -120,7 +170,7 @@ export function validateMedicalQuery(
     };
   }
 
-  // 1. Check for prompt injection or explicit non-medical patterns
+  // 1. Check for prompt injection or explicit non-medical patterns first
   for (const pattern of NON_MEDICAL_PATTERNS) {
     if (pattern.test(query)) {
       return {
@@ -141,19 +191,20 @@ export function validateMedicalQuery(
     };
   }
 
-  // 3. Check for references to patient records
-  const isReferencingRecords =
-    query.includes("report") ||
-    query.includes("prescription") ||
-    query.includes("medicine") ||
-    query.includes("doctor") ||
-    query.includes("result") ||
-    query.includes("upload") ||
-    query.includes("test") ||
-    query.includes("summary") ||
-    query.includes("record");
+  // 3. Check for explicit references to patient records, prescriptions, and reports
+  for (const phraseRegex of MEDICAL_RECORDS_PHRASES) {
+    if (phraseRegex.test(query)) {
+      return {
+        isMedical: true,
+        category: "medical_records",
+        refusalMessage: defaultRefusal,
+      };
+    }
+  }
 
-  if (isReferencingRecords) {
+  // Check Indic references to records, prescriptions, and reports
+  const hasIndicRecordTerm = INDIC_MEDICAL_KEYWORDS.some((kw) => query.includes(kw.toLowerCase()));
+  if (hasIndicRecordTerm) {
     return {
       isMedical: true,
       category: "medical_records",
@@ -166,22 +217,22 @@ export function validateMedicalQuery(
   let medicalScore = 0;
 
   for (const keyword of MEDICAL_KEYWORDS) {
-    if (query.includes(keyword)) {
+    if (query.includes(keyword.toLowerCase())) {
       medicalScore += 2;
     }
   }
 
   for (const token of tokens) {
-    if (MEDICAL_KEYWORDS.includes(token)) {
+    if (MEDICAL_KEYWORDS.some((k) => k.toLowerCase() === token)) {
       medicalScore += 1;
     }
   }
 
-  // Also check if any unique term from patient's uploaded records is mentioned
-  if (patientRecordsContext && patientRecordsContext.length > 10) {
+  // Also check if any clinical term from patient's uploaded records is mentioned
+  if (patientRecordsContext && patientRecordsContext.length > 5) {
     const contextLower = patientRecordsContext.toLowerCase();
     for (const token of tokens) {
-      if (token.length > 3 && contextLower.includes(token)) {
+      if (token.length > 3 && !COMMON_NON_CLINICAL_TOKENS.has(token) && contextLower.includes(token)) {
         medicalScore += 2;
       }
     }
@@ -195,11 +246,11 @@ export function validateMedicalQuery(
     };
   }
 
-  // If query does not contain medical terms and doesn't reference health records
+  // If query does not contain medical terms and doesn't reference health records/prescriptions/reports
   return {
     isMedical: false,
     category: "non_medical_restricted",
-    reason: "Query does not relate to medical, health, or clinical records.",
+    reason: "Query does not relate to medical, health, prescription, or clinical records.",
     refusalMessage: defaultRefusal,
   };
 }

@@ -117,10 +117,11 @@ export async function POST(request: NextRequest) {
 
   // Assemble patient context tokens to validate queries mentioning unique patient medical data
   const patientContextSummary = [
-    ...documents.map((d) => d.displayName),
-    ...medications.map((m) => m.name),
-    ...observations.map((o) => o.name),
-    ...visits.map((v) => v.title),
+    ...documents.map((d) => `${d.displayName} ${d.category}`),
+    ...medications.map((m) => `${m.name} ${m.instructions || ""}`),
+    ...observations.map((o) => `${o.name} ${o.value} ${o.unit || ""}`),
+    ...visits.map((v) => `${v.title || ""} ${v.content || ""}`),
+    ...extractions.map((e) => JSON.stringify(e.structured || {})),
   ].join(" ");
 
   // Pre-flight Clinical Guardrail Check: Restrict to healthcare and patient records only
