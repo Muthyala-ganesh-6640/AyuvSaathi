@@ -713,7 +713,7 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Container: Collapsible Menu Drawer + Dashboard Content */}
-      <div className="flex-1 flex max-w-[1600px] w-full mx-auto relative">
+      <div className="flex-1 flex w-full relative justify-center">
         {/* Collapsible Menu Drawer: Hidden by default, shown when Menu button is pressed */}
         {isMenuOpen && (
           <>
@@ -806,8 +806,9 @@ export default function DashboardPage() {
           </>
         )}
 
-        {/* Dashboard Canvas: Full-width when menu is closed */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-7 overflow-x-hidden w-full">
+        {/* Dashboard Canvas: Full-width when menu is closed, perfectly centered */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-7 overflow-x-hidden w-full flex flex-col items-center">
+          <div className="w-full max-w-7xl mx-auto space-y-6">
           {/* Healthcare Ecosystem Connected Network Hub */}
           <div className="mb-6 bg-gradient-to-r from-slate-900 via-[#17344F] to-[#0A2540] rounded-2xl p-4 sm:p-5 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1">
@@ -839,7 +840,7 @@ export default function DashboardPage() {
 
             </div>
           </div>
-          <div className="flex flex-col xl:flex-row gap-5">
+          <div className="flex flex-col xl:flex-row gap-5 justify-center items-start">
             {/* Main Center Dashboard Column: ~885px */}
             <div className="flex-1 max-w-full xl:max-w-[885px] space-y-4">
               {/* 1. Welcome Banner Card */}
@@ -1600,6 +1601,7 @@ export default function DashboardPage() {
               <Activity className="w-4 h-4 text-[#087F8C] ml-1" />
             </div>
           </footer>
+          </div>
         </main>
       </div>
 
