@@ -38,6 +38,7 @@ export async function geocode(query: string) {
   const res = await fetch(url, {
     headers: { "User-Agent": "ArogyaCopilot/1.0 (healthcare companion demo)" },
     next: { revalidate: 300 },
+    signal: AbortSignal.timeout(3500),
   });
   if (!res.ok) throw new Error("GEOCODE_FAILED");
   const parsed = nominatimSchema.safeParse(await res.json());
@@ -58,11 +59,12 @@ export async function searchCare(input: {
   const radius = input.radiusMeters ?? 4000;
   const amenity =
     input.kind === "hospital" ? "hospital" : input.kind === "pharmacy" ? "pharmacy" : "clinic";
-  const query = `[out:json][timeout:25];(node["amenity"="${amenity}"](around:${radius},${input.lat},${input.lon});way["amenity"="${amenity}"](around:${radius},${input.lat},${input.lon}););out center 30;`;
+  const query = `[out:json][timeout:5];(node["amenity"="${amenity}"](around:${radius},${input.lat},${input.lon});way["amenity"="${amenity}"](around:${radius},${input.lat},${input.lon}););out center 30;`;
   const res = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded", "User-Agent": "ArogyaCopilot/1.0" },
     body: `data=${encodeURIComponent(query)}`,
+    signal: AbortSignal.timeout(3500),
   });
   if (!res.ok) throw new Error("OVERPASS_FAILED");
   const data = (await res.json()) as {

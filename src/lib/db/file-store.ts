@@ -136,7 +136,30 @@ async function writeDb(db: DatabaseShape) {
   const storeFile = getStoreFile();
   const tmp = `${storeFile}.${randomBytes(6).toString("hex")}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf8");
-  await fs.rename(tmp, storeFile);
+  let renamed = false;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    try {
+      await fs.rename(tmp, storeFile);
+      renamed = true;
+      break;
+    } catch (err: unknown) {
+      const code = err && typeof err === "object" && "code" in err ? (err as { code: string }).code : "";
+      if (code === "EPERM" || code === "EBUSY") {
+        await new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
+      } else {
+        throw err;
+      }
+    }
+  }
+  if (!renamed) {
+    try {
+      await fs.copyFile(tmp, storeFile);
+      await fs.unlink(tmp).catch(() => undefined);
+    } catch {
+      await fs.writeFile(storeFile, JSON.stringify(db, null, 2), "utf8");
+      await fs.unlink(tmp).catch(() => undefined);
+    }
+  }
 }
 
 export async function mutate<T>(fn: (db: DatabaseShape) => T | Promise<T>): Promise<T> {
@@ -298,6 +321,12 @@ export const store = {
     }),
   getObservation: (id: string, ownerId: string) =>
     query((db) => db.observations.find((o) => o.id === id && o.ownerId === ownerId) ?? null),
+  deleteObservation: (id: string, ownerId: string) =>
+    mutate((db) => {
+      const before = db.observations.length;
+      db.observations = db.observations.filter((o) => !(o.id === id && o.ownerId === ownerId));
+      return db.observations.length < before;
+    }),
   listMedications: (ownerId: string) =>
     query((db) =>
       db.medications
@@ -353,6 +382,14 @@ export const store = {
         .filter((t) => t.ownerId === ownerId)
         .sort((a, b) => b.eventDate.localeCompare(a.eventDate)),
     ),
+  getTimelineEvent: (id: string, ownerId: string) =>
+    query((db) => db.timeline.find((t) => t.id === id && t.ownerId === ownerId) ?? null),
+  deleteTimelineEvent: (id: string, ownerId: string) =>
+    mutate((db) => {
+      const before = db.timeline.length;
+      db.timeline = db.timeline.filter((t) => !(t.id === id && t.ownerId === ownerId));
+      return db.timeline.length < before;
+    }),
   listVisits: (ownerId: string) =>
     query((db) =>
       db.visits.filter((v) => v.ownerId === ownerId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),

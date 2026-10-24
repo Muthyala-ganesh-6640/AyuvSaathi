@@ -12,14 +12,34 @@ const schema = z.object({
   verificationStatus: z.enum(["unconfirmed", "confirmed", "rejected"]).optional(),
 });
 
-export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   const auth = await withUser(request);
   if ("response" in auth) return auth.response;
   const { id } = await context.params;
+
+  const observation = await store.getObservation(id, auth.user.id);
+  if (!observation) return jsonError("Observation not found.", 404);
+
+  return Response.json({ observation });
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const auth = await withUser(request);
+  if ("response" in auth) return auth.response;
+  const { id } = await context.params;
+
   const row = await store.getObservation(id, auth.user.id);
   if (!row) return jsonError("Observation not found.", 404);
+
   const parsed = schema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return jsonError("Invalid observation update.", 400);
+  if (!parsed.success) return jsonError("Invalid observation update data.", 400);
+
   const updated = await store.saveObservation({
     ...row,
     ...parsed.data,
@@ -27,37 +47,20 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     uncertain: parsed.data.verificationStatus === "confirmed" ? false : row.uncertain,
     updatedAt: nowIso(),
   });
+
   return Response.json({ observation: updated });
 }
 
-export async function POST(request: NextRequest) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   const auth = await withUser(request);
   if ("response" in auth) return auth.response;
-  const schemaCreate = z.object({
-    documentId: z.string().uuid(),
-    name: z.string().min(1).max(200),
-    value: z.string().min(1).max(80),
-    unit: z.string().max(40).optional().default(""),
-    referenceRange: z.string().max(80).optional(),
-  });
-  const parsed = schemaCreate.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return jsonError("Enter a test name and the value shown on the document.", 400);
-  const document = await store.getDocument(parsed.data.documentId, auth.user.id);
-  if (!document) return jsonError("Document not found.", 404);
-  const created = nowIso();
-  const observation = await store.saveObservation({
-    id: crypto.randomUUID(),
-    ownerId: auth.user.id,
-    documentId: document.id,
-    name: parsed.data.name,
-    value: parsed.data.value,
-    unit: parsed.data.unit ?? "",
-    referenceRange: parsed.data.referenceRange,
-    uncertain: false,
-    verificationStatus: "confirmed",
-    provenance: "user_entered",
-    createdAt: created,
-    updatedAt: created,
-  });
-  return Response.json({ observation });
+  const { id } = await context.params;
+
+  const ok = await store.deleteObservation(id, auth.user.id);
+  if (!ok) return jsonError("Observation not found.", 404);
+
+  return Response.json({ ok: true });
 }

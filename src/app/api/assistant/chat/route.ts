@@ -78,13 +78,22 @@ export async function POST(request: NextRequest) {
     caution = "AI provider is not configured. Answer is synthesized from confirmed lab values.";
   }
 
-  if (!parsed.data.conversationId) {
+  const existingConv = parsed.data.conversationId
+    ? await store.getConversation(parsed.data.conversationId, auth.user.id)
+    : null;
+
+  if (!existingConv) {
     await store.saveConversation({
       id: conversationId,
       ownerId: auth.user.id,
       language: parsed.data.language,
       title: parsed.data.message.slice(0, 40) + "...",
       createdAt: now,
+      updatedAt: now,
+    });
+  } else {
+    await store.saveConversation({
+      ...existingConv,
       updatedAt: now,
     });
   }
