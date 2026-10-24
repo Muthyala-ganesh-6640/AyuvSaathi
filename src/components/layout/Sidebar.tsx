@@ -40,14 +40,14 @@ export function Sidebar({ onClose }: SidebarProps) {
   ];
 
   return (
-    <aside className="w-[260px] shrink-0 bg-white border-r border-[#E1EBF0] flex flex-col justify-between p-4 h-[calc(100vh-72px)] overflow-y-auto z-20 shadow-lg">
-      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
-        <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Menu</span>
+    <aside className="w-[260px] shrink-0 bg-white border-r border-[#D4E1EE] flex flex-col justify-between p-4 h-[calc(100vh-72px)] overflow-y-auto z-20 shadow-lg">
+      <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#D4E1EE]">
+        <span className="text-xs font-bold text-[#08193C] uppercase tracking-wide">Menu</span>
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-xs rounded-lg hover:bg-slate-100 text-slate-500 font-bold cursor-pointer"
+            className="p-1 text-xs rounded-lg hover:bg-[#EDF3F7] text-[#465978] font-bold cursor-pointer"
           >
             ✕ Close
           </button>
@@ -64,22 +64,22 @@ export function Sidebar({ onClose }: SidebarProps) {
               key={item.href}
               href={item.href}
               onClick={() => onClose && onClose()}
-              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
+              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all group ${
                 isActive
-                  ? "bg-[#DDF5F0] text-[#087F8C] font-bold shadow-xs"
-                  : "text-[#17344F] hover:bg-[#F7FAFC] hover:text-[#087F8C]"
+                  ? "bg-[#EDF3F7] text-[#08193C] font-bold border-l-4 border-[#DDB549] shadow-xs"
+                  : "text-[#465978] hover:bg-[#EDF3F7] hover:text-[#08193C]"
               }`}
             >
               <div className="flex items-center gap-3">
                 <Icon
-                  className={`w-4 h-4 shrink-0 ${
-                    isActive ? "text-[#087F8C]" : "text-[#61768A]"
+                  className={`w-4 h-4 shrink-0 transition-colors ${
+                    isActive ? "text-[#DDB549]" : "text-[#9AA5B4] group-hover:text-[#08193C]"
                   }`}
                 />
                 <span className="truncate">{item.label}</span>
               </div>
               {item.badge && (
-                <span className="w-5 h-5 rounded-full bg-[#D94B55] text-white text-[10px] font-bold flex items-center justify-center">
+                <span className="w-5 h-5 rounded-full bg-[#DDB549] text-[#08193C] text-[10px] font-bold flex items-center justify-center">
                   {item.badge}
                 </span>
               )}
@@ -88,14 +88,9 @@ export function Sidebar({ onClose }: SidebarProps) {
         })}
       </nav>
 
-      {/* Bottom privacy badge */}
-      <div className="pt-4 border-t border-[#E9F0F3] mt-auto">
-        <div className="p-3 bg-[#EFF9F5] border border-teal-100 rounded-xl flex items-start gap-2.5 text-xs text-teal-900">
-          <ShieldCheck className="w-4 h-4 text-[#087F8C] shrink-0 mt-0.5" />
-          <p className="leading-snug text-[11px] text-[#17344F]">
-            {t("privacyBadge")}
-          </p>
-        </div>
+      <div className="pt-4 border-t border-[#D4E1EE] text-[11px] text-[#465978] flex items-center gap-2">
+        <ShieldCheck className="w-4 h-4 text-[#DDB549] shrink-0" />
+        <span>Role-Verified Clinical Isolation</span>
       </div>
     </aside>
   );

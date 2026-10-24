@@ -113,27 +113,27 @@ export function FamilyProfileSwitcher({
       <button
         type="button"
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-[#EDF3F7] hover:bg-white border border-[#D4E1EE] text-[#08193C] text-xs font-semibold shadow-2xs transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-[#DDB549]"
       >
-        <div className="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center text-[11px] font-bold">
+        <div className="w-6 h-6 rounded-lg bg-[#08193C] text-[#DDB549] flex items-center justify-center text-[11px] font-bold">
           {activeMember.name.slice(0, 1)}
         </div>
         <div className="text-left">
           <div className="flex items-center gap-1.5 leading-none">
-            <span className="font-bold text-[#17344F]">{activeMember.name}</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-sm bg-slate-100 text-slate-600 font-medium">
+            <span className="font-bold text-[#08193C]">{activeMember.name}</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-sm bg-white border border-[#D4E1EE] text-[#465978] font-medium">
               {activeMember.relationship}
             </span>
           </div>
-          <span className="text-[10px] font-mono text-slate-500">{activeMember.ayuvSaathiId}</span>
+          <span className="text-[10px] font-mono text-[#465978]">{activeMember.ayuvSaathiId}</span>
         </div>
-        <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
+        <ChevronDown className="w-3.5 h-3.5 text-[#465978] ml-1" />
       </button>
 
       {/* Dropdown Menu */}
       {dropdownOpen && (
-        <div className="absolute left-0 mt-1.5 w-64 rounded-2xl bg-white border border-slate-200 shadow-xl z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-100">
-          <div className="px-2.5 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+        <div className="absolute left-0 mt-1.5 w-64 rounded-2xl bg-white border border-[#D4E1EE] shadow-xl z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-100">
+          <div className="px-2.5 py-1.5 text-[11px] font-bold text-[#465978] uppercase tracking-wider">
             Switch Family Profile
           </div>
 
@@ -146,20 +146,20 @@ export function FamilyProfileSwitcher({
             }}
             className={`w-full flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer ${
               activeProfileId === primaryUser.id
-                ? "bg-teal-50 text-teal-900 font-bold"
-                : "text-slate-700 hover:bg-slate-50"
+                ? "bg-[#EDF3F7] text-[#08193C] font-bold border-l-2 border-[#DDB549]"
+                : "text-[#465978] hover:bg-[#EDF3F7] hover:text-[#08193C]"
             }`}
           >
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-[10px]">
+              <div className="w-6 h-6 rounded-lg bg-[#08193C] text-[#DDB549] flex items-center justify-center font-bold text-[10px]">
                 {primaryUser.displayName.slice(0, 1)}
               </div>
               <div className="text-left">
                 <div>{primaryUser.displayName} (You)</div>
-                <div className="text-[10px] font-mono text-slate-400">Primary Health ID</div>
+                <div className="text-[10px] font-mono text-[#9AA5B4]">Primary Health ID</div>
               </div>
             </div>
-            {activeProfileId === primaryUser.id && <Check className="w-4 h-4 text-teal-600" />}
+            {activeProfileId === primaryUser.id && <Check className="w-4 h-4 text-[#DDB549]" />}
           </button>
 
           {/* Family members */}
@@ -173,36 +173,36 @@ export function FamilyProfileSwitcher({
               }}
               className={`w-full flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer ${
                 activeProfileId === m.id
-                  ? "bg-teal-50 text-teal-900 font-bold"
-                  : "text-slate-700 hover:bg-slate-50"
+                  ? "bg-[#EDF3F7] text-[#08193C] font-bold border-l-2 border-[#DDB549]"
+                  : "text-[#465978] hover:bg-[#EDF3F7] hover:text-[#08193C]"
               }`}
             >
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-[10px]">
+                <div className="w-6 h-6 rounded-lg bg-[#08193C] text-[#DDB549] flex items-center justify-center font-bold text-[10px]">
                   {m.name.slice(0, 1)}
                 </div>
                 <div className="text-left">
                   <div>{m.name}</div>
-                  <div className="text-[10px] font-mono text-slate-400 capitalize">
+                  <div className="text-[10px] font-mono text-[#9AA5B4] capitalize">
                     {m.relationship} • {m.ayuvSaathiId}
                   </div>
                 </div>
               </div>
-              {activeProfileId === m.id && <Check className="w-4 h-4 text-teal-600" />}
+              {activeProfileId === m.id && <Check className="w-4 h-4 text-[#DDB549]" />}
             </button>
           ))}
 
           {/* Add member button */}
-          <div className="pt-1 border-t border-slate-100">
+          <div className="pt-1 border-t border-[#D4E1EE]">
             <button
               type="button"
               onClick={() => {
                 setDropdownOpen(false);
                 setModalOpen(true);
               }}
-              className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-teal-700 hover:bg-teal-50 transition-colors cursor-pointer"
+              className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-[#08193C] hover:bg-[#EDF3F7] transition-colors cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 text-[#DDB549]" />
               <span>Add Family Member Profile</span>
             </button>
           </div>
@@ -211,22 +211,22 @@ export function FamilyProfileSwitcher({
 
       {/* Add Family Member Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-[#08193C]/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-[#D4E1EE] shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#D4E1EE]">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-700">
-                  <Heart className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-lg bg-[#08193C] flex items-center justify-center text-[#DDB549]">
+                  <Heart className="w-4 h-4 text-[#DDB549]" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[#17344F]">Add Family Health Profile</h3>
-                  <p className="text-[11px] text-[#61768A]">Independent Health ID & Isolated Records</p>
+                  <h3 className="text-sm font-bold text-[#08193C]">Add Family Health Profile</h3>
+                  <p className="text-[11px] text-[#465978]">Independent Health ID & Isolated Records</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-lg hover:bg-[#EDF3F7] text-[#08193C] flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -234,7 +234,7 @@ export function FamilyProfileSwitcher({
 
             <form onSubmit={handleAddMember} className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-[#08193C] mb-1">
                   Full Name *
                 </label>
                 <input
@@ -243,19 +243,19 @@ export function FamilyProfileSwitcher({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Ramesh Kumar"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-teal-600 outline-hidden"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-[#D4E1EE] focus:border-[#08193C] focus:ring-2 focus:ring-[#DDB549]/30 outline-hidden bg-[#FDFEFE] text-[#08193C]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#08193C] mb-1">
                     Relationship *
                   </label>
                   <select
                     value={relationship}
                     onChange={(e) => setRelationship(e.target.value as any)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:border-teal-600 outline-hidden"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#D4E1EE] bg-[#FDFEFE] text-[#08193C] focus:border-[#08193C] outline-hidden cursor-pointer"
                   >
                     <option value="father">Father</option>
                     <option value="mother">Mother</option>
@@ -265,13 +265,13 @@ export function FamilyProfileSwitcher({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#08193C] mb-1">
                     Gender
                   </label>
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value as any)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:border-teal-600 outline-hidden"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#D4E1EE] bg-[#FDFEFE] text-[#08193C] focus:border-[#08193C] outline-hidden cursor-pointer"
                   >
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -282,24 +282,24 @@ export function FamilyProfileSwitcher({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#08193C] mb-1">
                     Date of Birth
                   </label>
                   <input
                     type="date"
                     value={dob}
                     onChange={(e) => setDob(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:border-teal-600 outline-hidden"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#D4E1EE] bg-[#FDFEFE] text-[#08193C] focus:border-[#08193C] outline-hidden"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-[#08193C] mb-1">
                     Blood Group
                   </label>
                   <select
                     value={bloodGroup}
                     onChange={(e) => setBloodGroup(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:border-teal-600 outline-hidden"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-[#D4E1EE] bg-[#FDFEFE] text-[#08193C] focus:border-[#08193C] outline-hidden cursor-pointer"
                   >
                     {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((bg) => (
                       <option key={bg} value={bg}>{bg}</option>
@@ -309,7 +309,7 @@ export function FamilyProfileSwitcher({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-[#08193C] mb-1">
                   Emergency Contact Phone (Optional)
                 </label>
                 <input
@@ -317,18 +317,18 @@ export function FamilyProfileSwitcher({
                   value={emergencyContact}
                   onChange={(e) => setEmergencyContact(e.target.value)}
                   placeholder="+91 98490 12345"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-teal-600 outline-hidden"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-[#D4E1EE] focus:border-[#08193C] focus:ring-2 focus:ring-[#DDB549]/30 outline-hidden bg-[#FDFEFE] text-[#08193C]"
                 />
               </div>
 
-              <div className="p-3 bg-teal-50 rounded-xl text-[11px] text-teal-800 border border-teal-200">
+              <div className="p-3 bg-[#EDF3F7] rounded-xl text-[11px] text-[#08193C] border border-[#D4E1EE]">
                 Each family member receives an independent AyuvSaathi ID and rotating Universal Health QR code.
               </div>
 
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full py-2.5 px-4 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-xl bg-[#08193C] hover:bg-[#122958] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[#DDB549]"
               >
                 {saving ? "Creating Profile..." : "Create Family Health Profile"}
               </button>

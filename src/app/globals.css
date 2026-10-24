@@ -1,38 +1,61 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand-navy: #08193C;
+  --color-brand-navy-light: #122958;
+  --color-brand-navy-deep: #051027;
+  --color-brand-gold: #DDB549;
+  --color-brand-gold-hover: #C9A239;
+  --color-brand-gold-subtle: #FBF6E9;
+
+  --color-surface-bg: #FDFEFE;
+  --color-surface-card: #FFFFFF;
+  --color-surface-secondary: #EDF3F7;
+
+  --color-border-subtle: #D4E1EE;
+  --color-border-divider: #E4ECF4;
+
+  --color-text-navy: #08193C;
+  --color-text-secondary: #465978;
+  --color-text-muted: #9AA5B4;
+}
+
 :root {
-  /* Brand Identity Colors */
-  --brand-navy: #17466B;
-  --brand-teal: #087F8C;
-  --brand-teal-deep: #07545B;
-  --brand-green: #16A879;
-  --brand-leaf: #4DBE64;
+  /* Brand Identity Colors - Altrix Labs Navy & Gold Palette */
+  --brand-navy: #08193C;
+  --brand-navy-light: #122958;
+  --brand-navy-deep: #051027;
+  --brand-gold: #DDB549;
+  --brand-gold-hover: #C9A239;
+  --brand-gold-subtle: #FBF6E9;
 
   /* Surfaces & Backgrounds */
-  --background: #F7FAFC;
+  --background: #FDFEFE;
   --surface: #FFFFFF;
-  --surface-mint: #EFF9F5;
-  --surface-aqua: #DDF5F0;
+  --surface-secondary: #EDF3F7;
+  --surface-elevated: #FFFFFF;
 
   /* Typography */
-  --text-primary: #17344F;
-  --text-secondary: #61768A;
-  --text-muted: #8294A4;
+  --text-primary: #08193C;
+  --text-secondary: #465978;
+  --text-muted: #9AA5B4;
+  --text-on-dark: #FFFFFF;
 
   /* Dividers & Borders */
-  --border: #E1EBF0;
-  --divider: #E9F0F3;
+  --border: #D4E1EE;
+  --divider: #E4ECF4;
 
-  /* Semantic Status Colors */
-  --success: #219B65;
-  --info: #3186F6;
-  --warning: #E9A23B;
-  --critical: #D94B55;
+  /* Semantic Status Colors (Accessible against white and navy surfaces) */
+  --success: #1B8354;
+  --info: #1A62C6;
+  --warning: #C7831B;
+  --critical: #C93B46;
 
-  /* Geometry & Elevation */
-  --radius-card: 14px;
-  --radius-control: 8px;
-  --shadow-card: 0 1px 3px rgba(23, 70, 107, 0.04), 0 2px 8px rgba(23, 70, 107, 0.04);
+  /* Elevation & Geometry */
+  --radius-card: 16px;
+  --radius-control: 10px;
+  --shadow-card: 0 1px 3px rgba(8, 25, 60, 0.04), 0 3px 10px rgba(8, 25, 60, 0.03);
+  --shadow-dropdown: 0 4px 20px rgba(8, 25, 60, 0.12);
 }
 
 body {
@@ -43,26 +66,25 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Healthcare UI Utilities */
+/* Custom Enterprise UI Utilities */
 .bg-brand-navy { background-color: var(--brand-navy); }
 .text-brand-navy { color: var(--brand-navy); }
+.border-brand-navy { border-color: var(--brand-navy); }
 
-.bg-brand-teal { background-color: var(--brand-teal); }
-.text-brand-teal { color: var(--brand-teal); }
-.border-brand-teal { border-color: var(--brand-teal); }
+.bg-brand-gold { background-color: var(--brand-gold); }
+.text-brand-gold { color: var(--brand-gold); }
+.border-brand-gold { border-color: var(--brand-gold); }
 
-.bg-brand-green { background-color: var(--brand-green); }
-.text-brand-green { color: var(--brand-green); }
-
-.bg-surface-mint { background-color: var(--surface-mint); }
-.bg-surface-aqua { background-color: var(--surface-aqua); }
+.bg-surface-secondary { background-color: var(--surface-secondary); }
+.bg-surface-card { background-color: var(--surface); }
 
 .border-subtle { border-color: var(--border); }
 .text-secondary-muted { color: var(--text-secondary); }
+.text-subtle-muted { color: var(--text-muted); }
 
 /* Accessible Focus States */
 :focus-visible {
-  outline: 2px solid var(--brand-teal);
+  outline: 2px solid var(--brand-gold);
   outline-offset: 2px;
 }
 

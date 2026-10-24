@@ -92,24 +92,24 @@ export function NotificationsDrawer({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors cursor-pointer"
+        className="relative p-2 rounded-xl text-[#465978] hover:text-[#08193C] hover:bg-[#EDF3F7] transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-[#DDB549]"
         title="Notifications"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+          <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#08193C] text-[#DDB549] border border-[#DDB549]/40 text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white border border-slate-200 shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-          <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white border border-[#D4E1EE] shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="p-3.5 border-b border-[#D4E1EE] flex items-center justify-between bg-[#EDF3F7]">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-900">Notifications</span>
+              <span className="text-xs font-bold text-[#08193C]">Notifications</span>
               {unreadCount > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-red-100 text-red-700">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#08193C] text-white">
                   {unreadCount} unread
                 </span>
               )}
@@ -120,16 +120,16 @@ export function NotificationsDrawer({
                 type="button"
                 onClick={handleMarkAllRead}
                 disabled={marking}
-                className="text-[11px] text-teal-700 hover:text-teal-900 font-semibold cursor-pointer"
+                className="text-[11px] text-[#08193C] hover:text-[#DDB549] font-semibold cursor-pointer transition-colors"
               >
                 Mark all read
               </button>
             )}
           </div>
 
-          <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+          <div className="max-h-80 overflow-y-auto divide-y divide-[#D4E1EE]">
             {notifications.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400">
+              <div className="p-6 text-center text-xs text-[#9AA5B4]">
                 No notifications right now.
               </div>
             ) : (
@@ -138,15 +138,15 @@ export function NotificationsDrawer({
                   key={n.id}
                   href={n.link || "/dashboard"}
                   onClick={() => handleItemClick(n)}
-                  className={`block p-3 text-xs transition-colors hover:bg-slate-50 ${
-                    !n.read ? "bg-teal-50/40" : ""
+                  className={`block p-3 text-xs transition-colors hover:bg-[#EDF3F7] ${
+                    !n.read ? "bg-[#EDF3F7]/50" : ""
                   }`}
                 >
                   <div className="flex items-start gap-2.5">
                     <div className="mt-0.5 shrink-0">{getIcon(n.type)}</div>
                     <div className="flex-1 space-y-0.5">
                       <div className="flex items-center justify-between">
-                        <span className={`font-bold ${!n.read ? "text-[#17344F]" : "text-slate-700"}`}>
+                        <span className={`font-bold ${!n.read ? "text-[#08193C]" : "text-[#465978]"}`}>
                           {n.title}
                         </span>
                         {!n.read && (

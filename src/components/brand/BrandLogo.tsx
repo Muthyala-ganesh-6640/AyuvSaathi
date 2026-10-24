@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
-
 import { useTranslations } from "next-intl";
 
 interface BrandLogoProps {
@@ -22,8 +21,8 @@ export function BrandLogo({
 
   const content = (
     <div className={`flex items-center gap-3 select-none ${className}`}>
-      {/* Official AyuvSaathi Emblem / Robot Heart */}
-      <div className="relative shrink-0 overflow-hidden rounded-xl bg-white border border-[#E1EBF0] shadow-xs flex items-center justify-center p-0.5">
+      {/* Official AyuvSaathi Emblem with refined enterprise gold/navy border */}
+      <div className="relative shrink-0 overflow-hidden rounded-xl bg-white border border-[#D4E1EE] shadow-xs flex items-center justify-center p-0.5">
         <Image
           src="/brand/ayuvsaathi-emblem.png"
           alt="AyuvSaathi Healthcare Companion"
@@ -36,9 +35,9 @@ export function BrandLogo({
 
       {variant !== "emblem-only" && (
         <div className="flex flex-col leading-none">
-          <div className="flex items-baseline">
+          <div className="flex items-baseline gap-0.5">
             <span
-              className={`font-black tracking-tight text-[#17466B] ${
+              className={`font-black tracking-tight text-[#08193C] ${
                 variant === "auth"
                   ? "text-2xl"
                   : variant === "full"
@@ -49,7 +48,7 @@ export function BrandLogo({
               Ayuv
             </span>
             <span
-              className={`font-black tracking-tight text-[#087F8C] ${
+              className={`font-black tracking-tight text-[#08193C] ${
                 variant === "auth"
                   ? "text-2xl"
                   : variant === "full"
@@ -59,10 +58,11 @@ export function BrandLogo({
             >
               Saathi
             </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#DDB549] ml-0.5 self-center" />
           </div>
           {showTagline && (
             <span
-              className={`text-[#61768A] font-medium tracking-tight mt-0.5 ${
+              className={`text-[#465978] font-medium tracking-tight mt-0.5 ${
                 variant === "auth" ? "text-xs" : "text-[10px]"
               }`}
             >

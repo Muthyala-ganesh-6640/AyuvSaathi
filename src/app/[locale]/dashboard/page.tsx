@@ -460,8 +460,8 @@ export default function DashboardPage() {
             instruction: `${med.scheduledTime} · ${med.strength ? med.strength + " · " : ""}Scheduled Dose`,
             status: isTaken ? t("taken") : isPending ? t("upcoming") : med.status.toUpperCase(),
             isPending,
-            badgeColor: isTaken ? "bg-[#D9F8E8] text-[#1E824C]" : "bg-[#E4F1FF] text-[#206bc4]",
-            iconBg: idx === 0 ? "bg-[#DDF5F1] text-[#087F8C]" : idx === 1 ? "bg-[#FFF0DC] text-[#F59A35]" : "bg-[#FFE7E9] text-[#E03131]",
+            badgeColor: isTaken ? "bg-[#E8F5E9] text-[#2E7D32]" : "bg-[#EDF3F7] text-[#08193C]",
+            iconBg: idx === 0 ? "bg-[#EDF3F7] text-[#08193C]" : idx === 1 ? "bg-[#EDF3F7] text-[#DDB549]" : "bg-[#EDF3F7] text-[#465978]",
           };
         })
       : [];
@@ -562,18 +562,18 @@ export default function DashboardPage() {
   const reminderCount = data?.stats?.remindersCount ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#F7FAFC] text-[#142E4D] font-sans flex flex-col antialiased selection:bg-[#DDF5F1] selection:text-[#087F8C]">
+    <div className="min-h-screen bg-[#FDFEFE] text-[#08193C] font-sans flex flex-col antialiased selection:bg-[#EDF3F7] selection:text-[#08193C]">
       {/* Top Application Header: 72px high */}
-      <header className="h-[72px] bg-white border-b border-[#E2EDF4] px-6 flex items-center justify-between sticky top-0 z-30">
+      <header className="h-[72px] bg-white border-b border-[#D4E1EE] px-6 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
         {/* Left: Menu button + Brand block */}
         <div className="flex items-center gap-2.5 shrink-0">
           <button
             type="button"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#E2EDF4] hover:bg-[#F7FAFC] text-[#142E4D] font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#D4E1EE] hover:bg-[#EDF3F7] text-[#08193C] font-bold text-xs transition-colors cursor-pointer shadow-2xs focus-visible:outline-2 focus-visible:outline-[#DDB549]"
             title={isMenuOpen ? "Close Menu" : "Open Menu"}
           >
-            {isMenuOpen ? <X className="w-4 h-4 text-[#087F8C]" /> : <Menu className="w-4 h-4 text-[#087F8C]" />}
+            {isMenuOpen ? <X className="w-4 h-4 text-[#DDB549]" /> : <Menu className="w-4 h-4 text-[#08193C]" />}
             <span className="text-xs font-bold">{isMenuOpen ? "Close" : "Menu"}</span>
           </button>
           <BrandLogo variant="header" href="/dashboard" />
@@ -582,15 +582,15 @@ export default function DashboardPage() {
         {/* Center: Search input & Family Switcher */}
         <div className="flex-1 max-w-[640px] mx-4 flex items-center gap-3">
           <form onSubmit={handleSearchSubmit} className="relative flex-1">
-            <Search className="w-4 h-4 text-[#7B91A5] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#465978] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={header("searchPlaceholder")}
-              className="w-full bg-[#F7FAFC] border border-[#E2EDF4] focus:border-[#087F8C] focus:bg-white focus:ring-1 focus:ring-[#087F8C] text-xs sm:text-sm text-[#142E4D] rounded-xl pl-9 pr-16 py-2 outline-hidden transition-all placeholder:text-[#7B91A5]"
+              className="w-full bg-[#EDF3F7] border border-[#D4E1EE] focus:border-[#08193C] focus:bg-white focus:ring-2 focus:ring-[#DDB549]/30 text-xs sm:text-sm text-[#08193C] rounded-xl pl-9 pr-16 py-2 outline-hidden transition-all placeholder:text-[#9AA5B4]"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#7B91A5] border border-[#E2EDF4] bg-white px-1.5 py-0.5 rounded font-medium">
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#465978] border border-[#D4E1EE] bg-white px-1.5 py-0.5 rounded font-medium">
               Ctrl + K
             </span>
           </form>
@@ -624,41 +624,41 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-[#E2EDF4] rounded-xl text-xs font-semibold text-[#142E4D] hover:bg-[#F7FAFC] transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-[#D4E1EE] rounded-xl text-xs font-semibold text-[#08193C] hover:bg-[#EDF3F7] transition-colors cursor-pointer"
             >
-              <Globe className="w-3.5 h-3.5 text-[#58718B]" />
+              <Globe className="w-3.5 h-3.5 text-[#DDB549]" />
               <span>{locale === "te" ? "తెలుగు" : locale === "hi" ? "हिन्दी" : "English"}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-[#7B91A5]" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#465978]" />
             </button>
 
             {langDropdownOpen && (
-              <div className="absolute right-0 mt-1 w-32 bg-white border border-[#E2EDF4] rounded-xl shadow-lg py-1 z-40 text-xs">
+              <div className="absolute right-0 mt-1 w-32 bg-white border border-[#D4E1EE] rounded-xl shadow-lg py-1 z-40 text-xs">
                 <button
                   type="button"
                   onClick={() => handleLanguageChange("en")}
-                  className={`w-full text-left px-3 py-2 hover:bg-[#F7FAFC] flex items-center justify-between ${
-                    locale === "en" ? "font-bold text-[#087F8C]" : "text-[#142E4D]"
+                  className={`w-full text-left px-3 py-2 hover:bg-[#EDF3F7] flex items-center justify-between ${
+                    locale === "en" ? "font-bold text-[#08193C] bg-[#EDF3F7]/60" : "text-[#465978]"
                   }`}
                 >
-                  English {locale === "en" && <Check className="w-3.5 h-3.5" />}
+                  English {locale === "en" && <Check className="w-3.5 h-3.5 text-[#DDB549]" />}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleLanguageChange("te")}
-                  className={`w-full text-left px-3 py-2 hover:bg-[#F7FAFC] flex items-center justify-between ${
-                    locale === "te" ? "font-bold text-[#087F8C]" : "text-[#142E4D]"
+                  className={`w-full text-left px-3 py-2 hover:bg-[#EDF3F7] flex items-center justify-between ${
+                    locale === "te" ? "font-bold text-[#08193C] bg-[#EDF3F7]/60" : "text-[#465978]"
                   }`}
                 >
-                  తెలుగు {locale === "te" && <Check className="w-3.5 h-3.5" />}
+                  తెలుగు {locale === "te" && <Check className="w-3.5 h-3.5 text-[#DDB549]" />}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleLanguageChange("hi")}
-                  className={`w-full text-left px-3 py-2 hover:bg-[#F7FAFC] flex items-center justify-between ${
-                    locale === "hi" ? "font-bold text-[#087F8C]" : "text-[#142E4D]"
+                  className={`w-full text-left px-3 py-2 hover:bg-[#EDF3F7] flex items-center justify-between ${
+                    locale === "hi" ? "font-bold text-[#08193C] bg-[#EDF3F7]/60" : "text-[#465978]"
                   }`}
                 >
-                  हिन्दी {locale === "hi" && <Check className="w-3.5 h-3.5" />}
+                  हिन्दी {locale === "hi" && <Check className="w-3.5 h-3.5 text-[#DDB549]" />}
                 </button>
               </div>
             )}
@@ -669,39 +669,39 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-              className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-[#F7FAFC] transition-colors cursor-pointer"
+              className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-[#EDF3F7] transition-colors cursor-pointer"
             >
               <div className="relative">
-                <div className="w-9 h-9 rounded-full bg-[#17466B] text-white flex items-center justify-center text-xs font-bold ring-2 ring-[#087F8C]/20">
+                <div className="w-9 h-9 rounded-full bg-[#08193C] text-white flex items-center justify-center text-xs font-bold ring-2 ring-[#DDB549]/30">
                   {displayName.charAt(0)}
                 </div>
                 <span className="w-2.5 h-2.5 rounded-full bg-[#28AD65] ring-2 ring-white absolute -bottom-0.5 -right-0.5" />
               </div>
               <div className="hidden lg:block text-left pr-1">
-                <p className="text-xs font-bold text-[#142E4D] leading-tight">{displayName}</p>
-                <p className="text-[10px] text-[#7B91A5] leading-tight">Patient</p>
+                <p className="text-xs font-bold text-[#08193C] leading-tight">{displayName}</p>
+                <p className="text-[10px] text-[#465978] leading-tight">Patient</p>
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-[#7B91A5] hidden lg:block" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#465978] hidden lg:block" />
             </button>
 
             {profileDropdownOpen && (
-              <div className="absolute right-0 mt-1 w-48 bg-white border border-[#E2EDF4] rounded-xl shadow-lg py-1 z-40 text-xs">
-                <div className="px-3 py-2 border-b border-[#E2EDF4]">
-                  <p className="font-bold text-[#142E4D]">{displayName}</p>
-                  <p className="text-[10px] text-[#7B91A5] truncate">{data?.user?.email || "patient@ayuvsaathi.in"}</p>
+              <div className="absolute right-0 mt-1 w-48 bg-white border border-[#D4E1EE] rounded-xl shadow-lg py-1 z-40 text-xs">
+                <div className="px-3 py-2 border-b border-[#D4E1EE]">
+                  <p className="font-bold text-[#08193C]">{displayName}</p>
+                  <p className="text-[10px] text-[#9AA5B4] truncate">{data?.user?.email || "patient@ayuvsaathi.in"}</p>
                 </div>
                 <Link
                   href="/settings"
                   onClick={() => setProfileDropdownOpen(false)}
-                  className="w-full text-left px-3 py-2 hover:bg-[#F7FAFC] flex items-center gap-2 text-[#58718B] hover:text-[#142E4D]"
+                  className="w-full text-left px-3 py-2 hover:bg-[#EDF3F7] flex items-center gap-2 text-[#465978] hover:text-[#08193C]"
                 >
-                  <User className="w-3.5 h-3.5" />
+                  <User className="w-3.5 h-3.5 text-[#08193C]" />
                   Profile Settings
                 </Link>
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 border-t border-[#E2EDF4]"
+                  className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 border-t border-[#D4E1EE]"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Sign Out
@@ -718,19 +718,19 @@ export default function DashboardPage() {
         {isMenuOpen && (
           <>
             <div
-              className="fixed inset-0 top-[72px] bg-slate-900/40 backdrop-blur-2xs z-30 transition-opacity"
+              className="fixed inset-0 top-[72px] bg-[#08193C]/40 backdrop-blur-2xs z-30 transition-opacity"
               onClick={() => setIsMenuOpen(false)}
             />
-            <aside className="fixed top-[72px] left-0 bottom-0 z-40 w-[280px] bg-white border-r border-[#E2EDF4] flex flex-col justify-between py-5 px-3 shadow-2xl animate-in slide-in-from-left duration-200 overflow-y-auto">
+            <aside className="fixed top-[72px] left-0 bottom-0 z-40 w-[280px] bg-white border-r border-[#D4E1EE] flex flex-col justify-between py-5 px-3 shadow-2xl animate-in slide-in-from-left duration-200 overflow-y-auto">
               <div className="space-y-4">
-                <div className="flex items-center justify-between px-3 pb-2 border-b border-[#E2EDF4]">
-                  <span className="text-xs font-bold text-[#7B91A5] uppercase tracking-wider">Navigation Menu</span>
+                <div className="flex items-center justify-between px-3 pb-2 border-b border-[#D4E1EE]">
+                  <span className="text-xs font-bold text-[#465978] uppercase tracking-wider">Navigation Menu</span>
                   <button
                     type="button"
                     onClick={() => setIsMenuOpen(false)}
-                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer"
+                    className="p-1 rounded-lg hover:bg-[#EDF3F7] text-[#08193C] cursor-pointer"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4 text-[#08193C]" />
                   </button>
                 </div>
 
@@ -744,14 +744,14 @@ export default function DashboardPage() {
                         onClick={() => setIsMenuOpen(false)}
                         className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
                           item.active
-                            ? "bg-[#DDF5F1] text-[#087F8C]"
-                            : "text-[#58718B] hover:bg-[#F7FAFC] hover:text-[#142E4D]"
+                            ? "bg-[#EDF3F7] text-[#08193C] border-l-4 border-[#DDB549]"
+                            : "text-[#465978] hover:bg-[#EDF3F7] hover:text-[#08193C]"
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           <Icon
                             className={`w-4 h-4 transition-colors ${
-                              item.active ? "text-[#087F8C]" : "text-[#7B91A5] group-hover:text-[#087F8C]"
+                              item.active ? "text-[#DDB549]" : "text-[#465978] group-hover:text-[#08193C]"
                             }`}
                           />
                           <span>{item.label}</span>
@@ -759,7 +759,7 @@ export default function DashboardPage() {
                         {item.badge !== undefined && (
                           <span
                             className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                              item.active ? "bg-[#087F8C] text-white" : "bg-[#E2EDF4] text-[#58718B]"
+                              item.active ? "bg-[#08193C] text-white" : "bg-[#EDF3F7] text-[#465978]"
                             }`}
                           >
                             {item.badge}
@@ -771,8 +771,8 @@ export default function DashboardPage() {
                 </nav>
 
                 {/* Connected Healthcare Portals in Menu */}
-                <div className="pt-3 border-t border-[#E2EDF4]">
-                  <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#7B91A5] mb-2">
+                <div className="pt-3 border-t border-[#D4E1EE]">
+                  <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#465978] mb-2">
                     Care Team Dashboards
                   </p>
                   <div className="space-y-1">
@@ -782,9 +782,9 @@ export default function DashboardPage() {
                         setIsMenuOpen(false);
                         handleSwitchDomain("doctor");
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-800 hover:bg-blue-50 transition-colors text-left cursor-pointer"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#08193C] hover:bg-[#EDF3F7] transition-colors text-left cursor-pointer"
                     >
-                      <Stethoscope className="w-4 h-4 text-blue-600" />
+                      <Stethoscope className="w-4 h-4 text-[#DDB549]" />
                       <span>Doctor Workspace</span>
                     </button>
 
@@ -793,7 +793,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Patient Identity QR card in menu */}
-              <div className="mt-6 pt-4 border-t border-[#E2EDF4]">
+              <div className="mt-6 pt-4 border-t border-[#D4E1EE]">
                 {data?.user && (
                   <UniversalPatientQR
                     patientProfileId={activeProfileId || data.activeProfile?.id || (data.user as any).id || ""}
@@ -810,20 +810,20 @@ export default function DashboardPage() {
         <main className="flex-1 p-4 sm:p-6 lg:p-7 overflow-x-hidden w-full flex flex-col items-center">
           <div className="w-full max-w-7xl mx-auto space-y-6">
           {/* Healthcare Ecosystem Connected Network Hub */}
-          <div className="mb-6 bg-gradient-to-r from-slate-900 via-[#17344F] to-[#0A2540] rounded-2xl p-4 sm:p-5 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="mb-6 bg-gradient-to-r from-[#08193C] via-[#0C2353] to-[#08193C] rounded-2xl p-4 sm:p-5 text-white shadow-md border border-[#D4E1EE]/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/30">
+                <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#DDB549]/15 text-[#DDB549] border border-[#DDB549]/30">
                   Authorized Healthcare Network
                 </span>
-                <span className="text-xs text-slate-300 font-mono">
+                <span className="text-xs text-[#EDF3F7] font-mono">
                   {data?.activeProfile?.ayuvSaathiId || "AYUV-LIVE"}
                 </span>
               </div>
               <h2 className="text-sm sm:text-base font-bold text-white">
                 One Secure Health Identity · Synchronized with Authorized Care Professionals
               </h2>
-              <p className="text-xs text-slate-300 max-w-2xl">
+              <p className="text-xs text-[#D4E1EE] max-w-2xl">
                 Your medical records, lab reports, doctor summaries, and prescriptions are shared securely. Select an authorized portal to view the care provider experience:
               </p>
             </div>
@@ -832,9 +832,9 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => handleSwitchDomain("doctor")}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 border border-blue-400/40 text-blue-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-[#D4E1EE]/30 text-white text-xs font-bold transition-all shadow-xs cursor-pointer focus-visible:outline-2 focus-visible:outline-[#DDB549]"
               >
-                <Stethoscope className="w-3.5 h-3.5 text-blue-300" />
+                <Stethoscope className="w-3.5 h-3.5 text-[#DDB549]" />
                 <span>Doctor Portal</span>
               </button>
 
@@ -844,30 +844,30 @@ export default function DashboardPage() {
             {/* Main Center Dashboard Column: ~885px */}
             <div className="flex-1 max-w-full xl:max-w-[885px] space-y-4">
               {/* 1. Welcome Banner Card */}
-              <div className="bg-gradient-to-r from-[#DDF5F1] via-[#E8F8F5] to-[#F0FAF7] border border-[#C5EDE3] rounded-2xl p-5 flex items-center justify-between relative overflow-hidden shadow-2xs">
+              <div className="bg-gradient-to-r from-[#EDF3F7] via-[#F2F7FA] to-[#EDF3F7] border border-[#D4E1EE] rounded-2xl p-5 flex items-center justify-between relative overflow-hidden shadow-2xs">
                 <div className="max-w-[480px]">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/80 border border-teal-200 text-[#087F8C] text-[10px] font-bold uppercase tracking-wider mb-2">
-                    <Sparkles className="w-3 h-3 text-[#28AD65]" />
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white border border-[#D4E1EE] text-[#08193C] text-[10px] font-bold uppercase tracking-wider mb-2">
+                    <Sparkles className="w-3 h-3 text-[#DDB549]" />
                     {getIstGreeting()}
                   </div>
-                  <h1 className="text-xl sm:text-2xl font-black text-[#142E4D] tracking-tight leading-tight">
+                  <h1 className="text-xl sm:text-2xl font-black text-[#08193C] tracking-tight leading-tight">
                     {t("welcomeBack", { name: displayName })}
                   </h1>
-                  <p className="text-xs text-[#58718B] mt-1 leading-relaxed">
+                  <p className="text-xs text-[#465978] mt-1 leading-relaxed">
                     {t("welcomeSubtitle")}
                   </p>
                 </div>
 
                 <div className="hidden sm:flex flex-col items-end gap-2 shrink-0">
                   <div className="text-right">
-                    <span className="text-xs font-bold text-[#087F8C] block leading-tight">
+                    <span className="text-xs font-bold text-[#08193C] block leading-tight">
                       {t("healthyMindTag")} ♡
                     </span>
                   </div>
                   {/* Decorative Meditating Healthcare Figure */}
-                  <div className="w-20 h-20 rounded-full bg-white/70 border border-teal-200/60 flex items-center justify-center text-[#087F8C] relative shadow-2xs">
-                    <HeartPulse className="w-9 h-9 text-[#087F8C]" />
-                    <Sparkles className="w-3.5 h-3.5 text-[#28AD65] absolute top-1 right-2" />
+                  <div className="w-20 h-20 rounded-full bg-white border border-[#D4E1EE] flex items-center justify-center text-[#08193C] relative shadow-2xs">
+                    <HeartPulse className="w-9 h-9 text-[#08193C]" />
+                    <Sparkles className="w-3.5 h-3.5 text-[#DDB549] absolute top-1 right-2" />
                   </div>
                 </div>
               </div>
@@ -875,84 +875,84 @@ export default function DashboardPage() {
               {/* 2. Four Summary Stat Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
                 {/* Card 1: Lab Reports */}
-                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
+                <div className="bg-white border border-[#D4E1EE] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-[#E4F1FF] text-[#3186F6] flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-[#EDF3F7] text-[#08193C] flex items-center justify-center shrink-0">
                       <FileText className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-[11px] font-semibold text-[#58718B] leading-tight">{t("statLabReports")}</p>
-                      <p className="text-xl font-bold text-[#142E4D] leading-tight mt-0.5">
+                      <p className="text-[11px] font-semibold text-[#465978] leading-tight">{t("statLabReports")}</p>
+                      <p className="text-xl font-bold text-[#08193C] leading-tight mt-0.5">
                         {data?.stats?.labReportsCount ?? 4}
                       </p>
                     </div>
                   </div>
                   <Link
                     href="/reports"
-                    className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1 self-start"
+                    className="text-[10px] font-bold text-[#08193C] hover:text-[#DDB549] hover:underline flex items-center gap-1 self-start"
                   >
                     {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
                   </Link>
                 </div>
 
                 {/* Card 2: Upcoming Reminders */}
-                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
+                <div className="bg-white border border-[#D4E1EE] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-[#D9F8E8] text-[#28AD65] flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-[#FFFDF5] text-[#DDB549] border border-[#DDB549]/30 flex items-center justify-center shrink-0">
                       <Pill className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-[11px] font-semibold text-[#58718B] leading-tight">{t("statReminders")}</p>
-                      <p className="text-xl font-bold text-[#142E4D] leading-tight mt-0.5">
+                      <p className="text-[11px] font-semibold text-[#465978] leading-tight">{t("statReminders")}</p>
+                      <p className="text-xl font-bold text-[#08193C] leading-tight mt-0.5">
                         {data?.stats?.remindersCount ?? 2}
                       </p>
                     </div>
                   </div>
                   <Link
                     href="/reminders"
-                    className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1 self-start"
+                    className="text-[10px] font-bold text-[#08193C] hover:text-[#DDB549] hover:underline flex items-center gap-1 self-start"
                   >
                     {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
                   </Link>
                 </div>
 
                 {/* Card 3: Active Treatment Plans */}
-                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
+                <div className="bg-white border border-[#D4E1EE] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-[#F3E8FF] text-[#8B5CE8] flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-[#EDF3F7] text-[#08193C] flex items-center justify-center shrink-0">
                       <ClipboardList className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-[11px] font-semibold text-[#58718B] leading-tight">{t("statTreatmentPlans")}</p>
-                      <p className="text-xl font-bold text-[#142E4D] leading-tight mt-0.5">
+                      <p className="text-[11px] font-semibold text-[#465978] leading-tight">{t("statTreatmentPlans")}</p>
+                      <p className="text-xl font-bold text-[#08193C] leading-tight mt-0.5">
                         {data?.stats?.treatmentPlansCount ?? 0}
                       </p>
                     </div>
                   </div>
                   <Link
                     href="/doctor-summary"
-                    className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1 self-start"
+                    className="text-[10px] font-bold text-[#08193C] hover:text-[#DDB549] hover:underline flex items-center gap-1 self-start"
                   >
                     {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
                   </Link>
                 </div>
 
                 {/* Card 4: Medical Records */}
-                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
+                <div className="bg-white border border-[#D4E1EE] rounded-2xl p-3.5 flex flex-col justify-between h-[103px] shadow-2xs">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-[#FFF0DC] text-[#F59A35] flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-[#FFFDF5] text-[#DDB549] border border-[#DDB549]/30 flex items-center justify-center shrink-0">
                       <FolderHeart className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-[11px] font-semibold text-[#58718B] leading-tight">{t("statMedicalRecords")}</p>
-                      <p className="text-xl font-bold text-[#142E4D] leading-tight mt-0.5">
+                      <p className="text-[11px] font-semibold text-[#465978] leading-tight">{t("statMedicalRecords")}</p>
+                      <p className="text-xl font-bold text-[#08193C] leading-tight mt-0.5">
                         {data?.stats?.medicalRecordsCount ?? 8}
                       </p>
                     </div>
                   </div>
                   <Link
                     href="/timeline"
-                    className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1 self-start"
+                    className="text-[10px] font-bold text-[#08193C] hover:text-[#DDB549] hover:underline flex items-center gap-1 self-start"
                   >
                     {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
                   </Link>
@@ -962,19 +962,19 @@ export default function DashboardPage() {
               {/* 3. Mid Section: Health Trends Panel + Recent Activity Timeline */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5">
                 {/* Health Trends Panel (7 Cols) */}
-                <div className="md:col-span-7 bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
-                  <div className="flex items-center justify-between pb-2 border-b border-[#E2EDF4]">
+                <div className="md:col-span-7 bg-white border border-[#D4E1EE] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#D4E1EE]">
                     <div className="flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-[#087F8C]" />
+                      <BarChart3 className="w-4 h-4 text-[#08193C]" />
                       <div>
-                        <h3 className="text-xs font-bold text-[#142E4D]">{t("healthTrendsTitle")}</h3>
-                        <p className="text-[10px] text-[#7B91A5]">{t("healthTrendsSubtitle")}</p>
+                        <h3 className="text-xs font-bold text-[#08193C]">{t("healthTrendsTitle")}</h3>
+                        <p className="text-[10px] text-[#465978]">{t("healthTrendsSubtitle")}</p>
                       </div>
                     </div>
                     <select
                       value={dateRange}
                       onChange={(e) => setDateRange(e.target.value as "3" | "6" | "12")}
-                      className="text-[10px] font-semibold text-[#58718B] border border-[#E2EDF4] bg-[#F7FAFC] rounded-lg px-2 py-1 outline-hidden cursor-pointer"
+                      className="text-[10px] font-semibold text-[#465978] border border-[#D4E1EE] bg-[#EDF3F7] rounded-lg px-2 py-1 outline-hidden cursor-pointer"
                     >
                       <option value="3">{t("timeLast3Months")}</option>
                       <option value="6">{t("timeLast6Months")}</option>
@@ -986,38 +986,38 @@ export default function DashboardPage() {
                     <>
                       <div className="mt-3 flex items-start justify-between">
                         <div>
-                          <span className="text-[11px] font-bold text-[#142E4D]">{t("bloodGlucoseLabel")}</span>
-                          <div className="flex items-center gap-3 mt-1 text-[9px] text-[#58718B]">
+                          <span className="text-[11px] font-bold text-[#08193C]">{t("bloodGlucoseLabel")}</span>
+                          <div className="flex items-center gap-3 mt-1 text-[9px] text-[#465978]">
                             <span className="flex items-center gap-1">
-                              <span className="w-2.5 h-0.5 bg-[#087F8C] inline-block rounded"></span> {t("yourValue")}
+                              <span className="w-2.5 h-0.5 bg-[#08193C] inline-block rounded"></span> {t("yourValue")}
                             </span>
                           </div>
                         </div>
 
-                        <div className="bg-[#F7FAFC] border border-[#E2EDF4] rounded-xl p-2.5 text-center min-w-[120px]">
-                          <span className="text-[9px] text-[#7B91A5] font-semibold block uppercase">{t("latestValue")}</span>
-                          <div className="text-lg font-extrabold text-[#142E4D] leading-tight mt-0.5">
-                            {latestGlucose?.value} <span className="text-xs font-medium text-[#58718B]">mg/dL</span>
+                        <div className="bg-[#EDF3F7] border border-[#D4E1EE] rounded-xl p-2.5 text-center min-w-[120px]">
+                          <span className="text-[9px] text-[#465978] font-semibold block uppercase">{t("latestValue")}</span>
+                          <div className="text-lg font-extrabold text-[#08193C] leading-tight mt-0.5">
+                            {latestGlucose?.value} <span className="text-xs font-medium text-[#465978]">mg/dL</span>
                           </div>
-                          <span className="text-[9px] text-[#7B91A5] block mt-0.5">{latestGlucose?.date}</span>
+                          <span className="text-[9px] text-[#9AA5B4] block mt-0.5">{latestGlucose?.date}</span>
                         </div>
                       </div>
 
                       <div className="w-full h-36 mt-2">
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={chartData} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#E6EEF4" vertical={false} />
-                            <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#7B91A5" }} axisLine={false} tickLine={false} />
-                            <YAxis tick={{ fontSize: 9, fill: "#7B91A5" }} axisLine={false} tickLine={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#D4E1EE" vertical={false} />
+                            <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#465978" }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 9, fill: "#465978" }} axisLine={false} tickLine={false} />
                             <Tooltip
-                              contentStyle={{ backgroundColor: "#ffffff", borderRadius: "8px", border: "1px solid #E2EDF4", fontSize: "11px" }}
+                              contentStyle={{ backgroundColor: "#ffffff", borderRadius: "8px", border: "1px solid #D4E1EE", fontSize: "11px" }}
                             />
                             <Line
                               type="monotone"
                               dataKey="value"
-                              stroke="#087F8C"
+                              stroke="#08193C"
                               strokeWidth={2.5}
-                              dot={{ r: 3.5, fill: "#087F8C", stroke: "#ffffff", strokeWidth: 1.5 }}
+                              dot={{ r: 3.5, fill: "#DDB549", stroke: "#08193C", strokeWidth: 1.5 }}
                               activeDot={{ r: 5 }}
                             />
                           </LineChart>
@@ -1025,33 +1025,33 @@ export default function DashboardPage() {
                       </div>
                     </>
                   ) : (
-                    <p className="py-10 text-center text-xs text-[#7B91A5]">
+                    <p className="py-10 text-center text-xs text-[#9AA5B4]">
                       {loading ? common("loading") : t("noVerifiedData")}
                     </p>
                   )}
                 </div>
 
                 {/* Recent Activity Timeline (5 Cols) */}
-                <div className="md:col-span-5 bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
-                  <div className="flex items-center justify-between pb-2 border-b border-[#E2EDF4]">
-                    <h3 className="text-xs font-bold text-[#142E4D]">{t("recentActivityTitle")}</h3>
-                    <Link href="/timeline" className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1">
+                <div className="md:col-span-5 bg-white border border-[#D4E1EE] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#D4E1EE]">
+                    <h3 className="text-xs font-bold text-[#08193C]">{t("recentActivityTitle")}</h3>
+                    <Link href="/timeline" className="text-[10px] font-bold text-[#08193C] hover:text-[#DDB549] hover:underline flex items-center gap-1">
                       {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
                     </Link>
                   </div>
 
-                  <div className="mt-2.5 space-y-3 relative pl-3 border-l-2 border-[#E2EDF4] ml-2">
+                  <div className="mt-2.5 space-y-3 relative pl-3 border-l-2 border-[#D4E1EE] ml-2">
                     {dynamicActivities.length > 0 ? dynamicActivities.map((act) => (
                       <div key={act.id} className="relative group">
                         <span className={`w-2 h-2 rounded-full ${act.color} absolute -left-[17px] top-1 ring-4 ring-white`} />
                         <div className="flex items-start justify-between">
-                          <p className="text-[11px] font-bold text-[#142E4D] leading-tight">{act.title}</p>
-                          <span className="text-[9px] text-[#7B91A5] font-medium">{act.time}</span>
+                          <p className="text-[11px] font-bold text-[#08193C] leading-tight">{act.title}</p>
+                          <span className="text-[9px] text-[#9AA5B4] font-medium">{act.time}</span>
                         </div>
-                        <p className="text-[10px] text-[#58718B] mt-0.5 leading-snug">{act.desc}</p>
+                        <p className="text-[10px] text-[#465978] mt-0.5 leading-snug">{act.desc}</p>
                       </div>
                     )) : (
-                      <p className="py-4 text-xs text-[#7B91A5]">{loading ? common("loading") : t("noVerifiedData")}</p>
+                      <p className="py-4 text-xs text-[#9AA5B4]">{loading ? common("loading") : t("noVerifiedData")}</p>
                     )}
                   </div>
                 </div>
@@ -1060,13 +1060,13 @@ export default function DashboardPage() {
               {/* 4. Lower Cards: Recent Lab Reports (6 Cols) + Active Treatment Plans (6 Cols) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {/* Recent Lab Reports Card */}
-                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs">
-                  <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+                <div className="bg-white border border-[#D4E1EE] rounded-2xl p-4 shadow-2xs">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-[#D4E1EE]">
                     <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[#087F8C]" />
-                      <h3 className="text-xs font-bold text-[#142E4D]">{t("recentLabReportsTable")}</h3>
+                      <FileText className="w-4 h-4 text-[#08193C]" />
+                      <h3 className="text-xs font-bold text-[#08193C]">{t("recentLabReportsTable")}</h3>
                     </div>
-                    <Link href="/reports" className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1">
+                    <Link href="/reports" className="text-[10px] font-bold text-[#08193C] hover:text-[#DDB549] hover:underline flex items-center gap-1">
                       {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
                     </Link>
                   </div>
@@ -1076,42 +1076,42 @@ export default function DashboardPage() {
                       <Link
                         key={report.id}
                         href={`/reports/${report.id}`}
-                        className="p-2.5 rounded-xl border border-[#E2EDF4] bg-[#F7FAFC] flex items-center justify-between hover:bg-white hover:border-[#087F8C]/30 transition-colors block"
+                        className="p-2.5 rounded-xl border border-[#D4E1EE] bg-[#FDFEFE] flex items-center justify-between hover:bg-[#EDF3F7] hover:border-[#08193C]/30 transition-colors block"
                       >
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-[#E4F1FF] text-[#3186F6] flex items-center justify-center shrink-0">
+                          <div className="w-7 h-7 rounded-lg bg-[#EDF3F7] text-[#08193C] flex items-center justify-center shrink-0">
                             <FileText className="w-3.5 h-3.5" />
                           </div>
                           <div>
-                            <p className="text-[11px] font-bold text-[#142E4D] leading-tight">{report.name}</p>
-                            <p className="text-[9px] text-[#7B91A5]">{report.date} · {report.source}</p>
+                            <p className="text-[11px] font-bold text-[#08193C] leading-tight">{report.name}</p>
+                            <p className="text-[9px] text-[#465978]">{report.date} · {report.source}</p>
                           </div>
                         </div>
-                        <span className="px-2 py-0.5 bg-[#D9F8E8] text-[#1E824C] text-[9px] font-bold rounded-full">
+                        <span className="px-2 py-0.5 bg-[#EDF3F7] text-[#08193C] border border-[#D4E1EE] text-[9px] font-bold rounded-full">
                           ✓ {t("statusProcessed")}
                         </span>
                       </Link>
                     )) : (
-                      <p className="py-4 text-xs text-[#7B91A5]">{loading ? common("loading") : t("noVerifiedData")}</p>
+                      <p className="py-4 text-xs text-[#9AA5B4]">{loading ? common("loading") : t("noVerifiedData")}</p>
                     )}
                   </div>
                 </div>
 
                 {/* Active Treatment Plans Card */}
-                <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
+                <div className="bg-white border border-[#D4E1EE] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+                    <div className="flex items-center justify-between pb-2.5 border-b border-[#D4E1EE]">
                       <div className="flex items-center gap-2">
-                        <ClipboardList className="w-4 h-4 text-[#087F8C]" />
-                        <h3 className="text-xs font-bold text-[#142E4D]">{t("activeTreatmentPlansTable")}</h3>
+                        <ClipboardList className="w-4 h-4 text-[#08193C]" />
+                        <h3 className="text-xs font-bold text-[#08193C]">{t("activeTreatmentPlansTable")}</h3>
                       </div>
-                      <Link href="/doctor-summary" className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1">
+                      <Link href="/doctor-summary" className="text-[10px] font-bold text-[#08193C] hover:text-[#DDB549] hover:underline flex items-center gap-1">
                         {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
                       </Link>
                     </div>
 
                     <div className="mt-3">
-                      <p className="py-4 text-xs text-[#7B91A5]">
+                      <p className="py-4 text-xs text-[#9AA5B4]">
                         {loading ? common("loading") : t("noVerifiedData")}
                       </p>
                     </div>
@@ -1119,21 +1119,21 @@ export default function DashboardPage() {
 
                   <Link
                     href="/doctor-summary"
-                    className="mt-3 w-full py-1.5 px-3 rounded-xl border border-[#E2EDF4] hover:bg-[#F7FAFC] text-[11px] font-bold text-[#087F8C] flex items-center justify-center gap-1 transition-colors"
+                    className="mt-3 w-full py-1.5 px-3 rounded-xl border border-[#D4E1EE] hover:bg-[#EDF3F7] text-[11px] font-bold text-[#08193C] flex items-center justify-center gap-1 transition-colors"
                   >
-                    {t("viewDetails")} <ArrowRight className="w-3 h-3" />
+                    {t("viewDetails")} <ArrowRight className="w-3 h-3 text-[#DDB549]" />
                   </Link>
                 </div>
               </div>
 
               {/* 5. Lower Row: Recent Medical Records Card with Accurate Routing */}
-              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs">
-                <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+              <div className="bg-white border border-[#D4E1EE] rounded-2xl p-4 shadow-2xs">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#D4E1EE]">
                   <div className="flex items-center gap-2">
-                    <FolderHeart className="w-4 h-4 text-[#087F8C]" />
-                    <h3 className="text-xs font-bold text-[#142E4D]">{t("recentMedicalRecordsTable")}</h3>
+                    <FolderHeart className="w-4 h-4 text-[#08193C]" />
+                    <h3 className="text-xs font-bold text-[#08193C]">{t("recentMedicalRecordsTable")}</h3>
                   </div>
-                  <Link href="/timeline" className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1">
+                  <Link href="/timeline" className="text-[10px] font-bold text-[#08193C] hover:text-[#DDB549] hover:underline flex items-center gap-1">
                     {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
                   </Link>
                 </div>
@@ -1143,35 +1143,35 @@ export default function DashboardPage() {
                     <Link
                       key={rec.key}
                       href={rec.href}
-                      className="p-2.5 rounded-xl border border-[#E2EDF4] bg-[#F7FAFC] flex items-center justify-between hover:bg-white hover:border-[#087F8C]/30 transition-all group"
+                      className="p-2.5 rounded-xl border border-[#D4E1EE] bg-[#FDFEFE] flex items-center justify-between hover:bg-[#EDF3F7] hover:border-[#08193C]/30 transition-all group"
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-[#DDF5F1] text-[#087F8C] flex items-center justify-center shrink-0">
+                        <div className="w-7 h-7 rounded-lg bg-[#EDF3F7] text-[#08193C] flex items-center justify-center shrink-0">
                           <FileText className="w-3.5 h-3.5" />
                         </div>
                         <div>
-                          <p className="text-[11px] font-bold text-[#142E4D] leading-tight group-hover:text-[#087F8C] transition-colors">
+                          <p className="text-[11px] font-bold text-[#08193C] leading-tight group-hover:text-[#DDB549] transition-colors">
                             {rec.title}
                           </p>
-                          <p className="text-[9px] text-[#7B91A5]">{rec.date}</p>
+                          <p className="text-[9px] text-[#465978]">{rec.date}</p>
                         </div>
                       </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-[#7B91A5] group-hover:translate-x-0.5 transition-transform" />
+                      <ChevronRight className="w-3.5 h-3.5 text-[#9AA5B4] group-hover:translate-x-0.5 group-hover:text-[#08193C] transition-all" />
                     </Link>
                   )) : (
-                    <p className="py-4 text-xs text-[#7B91A5]">{loading ? common("loading") : t("noVerifiedData")}</p>
+                    <p className="py-4 text-xs text-[#9AA5B4]">{loading ? common("loading") : t("noVerifiedData")}</p>
                   )}
                 </div>
               </div>
 
               {/* 6. My Connected Doctors (Section 8 of Specification) */}
-              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs space-y-3">
-                <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+              <div className="bg-white border border-[#D4E1EE] rounded-2xl p-4 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#D4E1EE]">
                   <div className="flex items-center gap-2">
-                    <Stethoscope className="w-4 h-4 text-[#087F8C]" />
-                    <h3 className="text-xs font-bold text-[#142E4D]">My Connected Doctors</h3>
+                    <Stethoscope className="w-4 h-4 text-[#08193C]" />
+                    <h3 className="text-xs font-bold text-[#08193C]">My Connected Doctors</h3>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EDF3F7] text-[#08193C] border border-[#D4E1EE]">
                     {data?.connections?.filter((c) => c.professionalRole === "doctor").length ?? 0} Connected
                   </span>
                 </div>
@@ -1183,27 +1183,27 @@ export default function DashboardPage() {
                       .map((doc) => (
                         <div
                           key={doc.id}
-                          className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 flex flex-col justify-between space-y-3"
+                          className="p-3.5 rounded-xl border border-[#D4E1EE] bg-[#FDFEFE] flex flex-col justify-between space-y-3"
                         >
                           <div>
                             <div className="flex items-center justify-between">
-                              <span className="font-bold text-xs text-[#17344F]">{doc.professionalName}</span>
-                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
+                              <span className="font-bold text-xs text-[#08193C]">{doc.professionalName}</span>
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#E8F5E9] text-[#2E7D32] font-semibold">
                                 {doc.status}
                               </span>
                             </div>
-                            <p className="text-[11px] text-slate-600 mt-0.5">
+                            <p className="text-[11px] text-[#465978] mt-0.5">
                               {doc.specialization || "General Physician"} • {doc.organizationName}
                             </p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">
+                            <p className="text-[10px] text-[#9AA5B4] mt-0.5">
                               Last interaction: {new Date(doc.lastInteractionAt).toLocaleDateString()}
                             </p>
                           </div>
 
-                          <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60">
+                          <div className="flex items-center gap-2 pt-1 border-t border-[#D4E1EE]">
                             <Link
                               href="/assistant"
-                              className="flex-1 py-1 px-2.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-[11px] font-semibold text-slate-700 text-center transition-colors"
+                              className="flex-1 py-1 px-2.5 rounded-lg bg-white border border-[#D4E1EE] hover:bg-[#EDF3F7] text-[11px] font-semibold text-[#08193C] text-center transition-colors"
                             >
                               Message
                             </Link>
@@ -1220,7 +1220,7 @@ export default function DashboardPage() {
                             <button
                               type="button"
                               onClick={() => handleRevokeConnection(doc.id)}
-                              className="py-1 px-2 rounded-lg bg-slate-100 hover:bg-red-50 text-[10px] font-semibold text-slate-500 hover:text-red-700 transition-colors cursor-pointer"
+                              className="py-1 px-2 rounded-lg bg-[#EDF3F7] hover:bg-red-50 text-[10px] font-semibold text-[#465978] hover:text-red-700 transition-colors cursor-pointer"
                               title="Revoke doctor collaboration access"
                             >
                               Revoke
@@ -1229,7 +1229,7 @@ export default function DashboardPage() {
                         </div>
                       ))
                   ) : (
-                    <div className="col-span-2 p-4 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                    <div className="col-span-2 p-4 text-center text-xs text-[#465978] bg-[#EDF3F7] rounded-xl border border-[#D4E1EE]">
                       No doctors connected to this profile yet. Doctors can connect by scanning your Universal Health QR code.
                     </div>
                   )}
@@ -1237,24 +1237,24 @@ export default function DashboardPage() {
               </div>
 
               {/* Personalized Wellness Recommendations (Section 3.3 of Specification) */}
-              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-5 shadow-2xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E2EDF4] gap-2">
+              <div className="bg-white border border-[#D4E1EE] rounded-2xl p-5 shadow-2xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#D4E1EE] gap-2">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shrink-0">
-                      <Sparkles className="w-5 h-5 text-teal-600" />
+                    <div className="w-9 h-9 rounded-xl bg-[#08193C] text-[#DDB549] flex items-center justify-center shrink-0">
+                      <Sparkles className="w-5 h-5 text-[#DDB549]" />
                     </div>
                     <div>
-                      <h3 className="text-sm sm:text-base font-bold text-[#142E4D]">
+                      <h3 className="text-sm sm:text-base font-bold text-[#08193C]">
                         Personalized Wellness & Lifestyle Guidance
                       </h3>
-                      <p className="text-[11px] text-[#7B91A5]">
+                      <p className="text-[11px] text-[#465978]">
                         Tailored lifestyle advice based on your conditions, test values, and age.
                       </p>
                     </div>
                   </div>
                   {data?.wellnessAnalysis && (
                     <div className="flex items-center gap-2 self-start sm:self-auto">
-                      <span className="text-[11px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full">
+                      <span className="text-[11px] font-bold text-[#08193C] bg-[#EDF3F7] border border-[#DDB549]/40 px-3 py-1 rounded-full">
                         Wellness Vitality Score: {data.wellnessAnalysis.overallWellnessScore}/100
                       </span>
                     </div>
@@ -1262,7 +1262,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Category Filter Pills */}
-                <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+                <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#EDF3F7] border border-[#D4E1EE] rounded-xl text-xs font-semibold">
                   {(["all", "diet", "activity", "sleep", "habits"] as const).map((cat) => {
                     const active = selectedWellnessCategory === cat;
                     const labels: Record<string, string> = {
@@ -1279,8 +1279,8 @@ export default function DashboardPage() {
                         onClick={() => setSelectedWellnessCategory(cat)}
                         className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer text-xs ${
                           active
-                            ? "bg-white text-teal-800 font-bold shadow-xs"
-                            : "text-slate-600 hover:text-slate-900"
+                            ? "bg-[#08193C] text-white font-bold shadow-xs border-b-2 border-[#DDB549]"
+                            : "text-[#465978] hover:text-[#08193C]"
                         }`}
                       >
                         {labels[cat]}
@@ -1295,33 +1295,33 @@ export default function DashboardPage() {
                     filteredWellnessRecs.map((rec) => (
                       <div
                         key={rec.id}
-                        className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors space-y-2.5"
+                        className="p-4 rounded-xl border border-[#D4E1EE] bg-[#FDFEFE] hover:bg-[#EDF3F7]/50 transition-colors space-y-2.5"
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-teal-100 text-teal-800">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#08193C] text-white">
                               {rec.category}
                             </span>
-                            <h4 className="font-bold text-xs sm:text-sm text-[#142E4D]">
+                            <h4 className="font-bold text-xs sm:text-sm text-[#08193C]">
                               {rec.title}
                             </h4>
                           </div>
-                          <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 self-start sm:self-auto">
+                          <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-[#EDF3F7] text-[#465978] border border-[#D4E1EE] self-start sm:self-auto">
                             {rec.evidenceTag}
                           </span>
                         </div>
 
-                        <p className="text-xs text-slate-700 leading-relaxed font-normal">
+                        <p className="text-xs text-[#465978] leading-relaxed font-normal">
                           {rec.advice}
                         </p>
 
                         {/* Why this is recommended for you */}
-                        <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-950 space-y-1">
-                          <div className="flex items-center gap-1.5 font-bold text-amber-900">
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <div className="p-3 rounded-xl bg-[#FFFDF5] border border-[#DDB549]/40 text-xs text-[#08193C] space-y-1">
+                          <div className="flex items-center gap-1.5 font-bold text-[#08193C]">
+                            <AlertTriangle className="w-3.5 h-3.5 text-[#DDB549] shrink-0" />
                             <span>Why this is recommended for you:</span>
                           </div>
-                          <p className="text-[11px] text-amber-900/90 leading-relaxed pl-5">
+                          <p className="text-[11px] text-[#465978] leading-relaxed pl-5">
                             {rec.whyRecommended}
                           </p>
                         </div>
@@ -1329,13 +1329,13 @@ export default function DashboardPage() {
                         {/* Action Steps */}
                         {rec.actionSteps && rec.actionSteps.length > 0 && (
                           <div className="space-y-1 pt-1">
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                            <p className="text-[10px] font-bold text-[#08193C] uppercase tracking-wide">
                               Actionable Steps:
                             </p>
                             <div className="space-y-1">
                               {rec.actionSteps.map((step, sIdx) => (
-                                <div key={sIdx} className="flex items-start gap-2 text-xs text-slate-600">
-                                  <Check className="w-3.5 h-3.5 text-teal-600 mt-0.5 shrink-0" />
+                                <div key={sIdx} className="flex items-start gap-2 text-xs text-[#465978]">
+                                  <Check className="w-3.5 h-3.5 text-[#08193C] mt-0.5 shrink-0" />
                                   <span>{step}</span>
                                 </div>
                               ))}
@@ -1345,29 +1345,29 @@ export default function DashboardPage() {
                       </div>
                     ))
                   ) : (
-                    <div className="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                    <div className="p-6 text-center text-xs text-[#9AA5B4] bg-[#EDF3F7] rounded-xl border border-[#D4E1EE]">
                       No recommendations found in this category.
                     </div>
                   )}
                 </div>
 
                 {/* Wellness Safety Disclaimer */}
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 flex items-start gap-2">
-                  <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                <div className="p-3 rounded-xl bg-[#EDF3F7] border border-[#D4E1EE] text-[11px] text-[#465978] flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#DDB549] shrink-0 mt-0.5" />
                   <p className="leading-relaxed">
-                    <strong>General Wellness Advice:</strong> These personalized suggestions provide general lifestyle, diet, and wellness tips based on your health records. Please consult with your physician before beginning any new exercise or dietary regimen.
+                    <strong className="text-[#08193C]">General Wellness Advice:</strong> These personalized suggestions provide general lifestyle, diet, and wellness tips based on your health records. Please consult with your physician before beginning any new exercise or dietary regimen.
                   </p>
                 </div>
               </div>
 
               {/* 7. Pharmacy Dispensed Medications & Bills (Section 17 of Specification) */}
-              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs space-y-3">
-                <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+              <div className="bg-white border border-[#D4E1EE] rounded-2xl p-4 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#D4E1EE]">
                   <div className="flex items-center gap-2">
-                    <Receipt className="w-4 h-4 text-amber-600" />
-                    <h3 className="text-xs font-bold text-[#142E4D]">Pharmacy Bills & Dispensed Medicines</h3>
+                    <Receipt className="w-4 h-4 text-[#08193C]" />
+                    <h3 className="text-xs font-bold text-[#08193C]">Pharmacy Bills & Dispensed Medicines</h3>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-semibold">
+                  <span className="text-[10px] text-[#465978] font-semibold">
                     Purchase Record ≠ Prescription
                   </span>
                 </div>
@@ -1377,28 +1377,28 @@ export default function DashboardPage() {
                     data?.pharmacyBills?.map((bill) => (
                       <div
                         key={bill.id}
-                        className="p-3 rounded-xl border border-slate-200 bg-slate-50/60 flex items-center justify-between text-xs"
+                        className="p-3 rounded-xl border border-[#D4E1EE] bg-[#FDFEFE] flex items-center justify-between text-xs"
                       >
                         <div>
-                          <div className="font-bold text-slate-800">
+                          <div className="font-bold text-[#08193C]">
                             {bill.pharmacyName} • Bill #{bill.id}
                           </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">
+                          <div className="text-[11px] text-[#465978] mt-0.5">
                             {new Date(bill.billDate).toLocaleDateString()} • {bill.items?.map((i) => `${i.quantity}x ${i.medicineName}`).join(", ") || "Medicines"}
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-mono font-bold text-amber-900 text-sm">
+                          <div className="font-mono font-bold text-[#08193C] text-sm">
                             ₹{bill.totalAmount}
                           </div>
-                          <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
+                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-[#E8F5E9] text-[#2E7D32]">
                             {bill.paymentStatus}
                           </span>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="p-4 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                    <div className="p-4 text-center text-xs text-[#9AA5B4] bg-[#EDF3F7] rounded-xl border border-[#D4E1EE]">
                       No pharmacy purchases recorded for this profile yet.
                     </div>
                   )}
@@ -1416,13 +1416,13 @@ export default function DashboardPage() {
               />
 
               {/* 1. Medicine Reminders (~260px) */}
-              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs">
-                <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
+              <div className="bg-white border border-[#D4E1EE] rounded-2xl p-4 shadow-2xs">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[#D4E1EE]">
                   <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-[#087F8C]" />
-                    <h3 className="text-xs font-bold text-[#142E4D]">{t("medicineRemindersTitle")}</h3>
+                    <Bell className="w-4 h-4 text-[#08193C]" />
+                    <h3 className="text-xs font-bold text-[#08193C]">{t("medicineRemindersTitle")}</h3>
                   </div>
-                  <Link href="/reminders" className="text-[10px] font-bold text-[#087F8C] hover:underline flex items-center gap-1">
+                  <Link href="/reminders" className="text-[10px] font-bold text-[#08193C] hover:text-[#DDB549] hover:underline flex items-center gap-1">
                     {t("viewAll")} <ArrowRight className="w-2.5 h-2.5" />
                   </Link>
                 </div>
@@ -1431,7 +1431,7 @@ export default function DashboardPage() {
                   {dynamicReminders.length > 0 ? dynamicReminders.map((med) => (
                     <div
                       key={med.id}
-                      className="p-2.5 rounded-xl border border-[#E2EDF4] bg-[#F7FAFC] hover:bg-white transition-colors space-y-2"
+                      className="p-2.5 rounded-xl border border-[#D4E1EE] bg-[#FDFEFE] hover:bg-[#EDF3F7] transition-colors space-y-2"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
@@ -1439,8 +1439,8 @@ export default function DashboardPage() {
                             <Pill className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-xs font-bold text-[#142E4D] leading-tight">{med.name}</p>
-                            <p className="text-[10px] text-[#7B91A5] mt-0.5">{med.instruction}</p>
+                            <p className="text-xs font-bold text-[#08193C] leading-tight">{med.name}</p>
+                            <p className="text-[10px] text-[#465978] mt-0.5">{med.instruction}</p>
                           </div>
                         </div>
                         <span className={`px-2 py-0.5 ${med.badgeColor} text-[10px] font-bold rounded-full`}>
@@ -1449,40 +1449,40 @@ export default function DashboardPage() {
                       </div>
 
                       {med.isPending && (
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200/60">
+                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#D4E1EE]">
                           <button
                             type="button"
                             onClick={() => handleConfirmDose(med.id)}
-                            className="flex-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                            className="flex-1 py-1 px-2 rounded-lg bg-[#08193C] hover:bg-[#122958] text-white text-[10px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-2xs focus-visible:outline-2 focus-visible:outline-[#DDB549]"
                           >
-                            <Check className="w-3 h-3" /> Taken
+                            <Check className="w-3 h-3 text-[#DDB549]" /> Taken
                           </button>
                           <button
                             type="button"
                             onClick={() => handleSnoozeDose(med.id, 15)}
-                            className="py-1 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-[10px] font-semibold transition-colors cursor-pointer flex items-center gap-0.5"
+                            className="py-1 px-2 rounded-lg bg-[#EDF3F7] hover:bg-[#D4E1EE] border border-[#D4E1EE] text-[#08193C] text-[10px] font-semibold transition-colors cursor-pointer flex items-center gap-0.5"
                             title="Snooze reminder by 15 mins"
                           >
-                            <Clock className="w-3 h-3 text-amber-600" /> +15m
+                            <Clock className="w-3 h-3 text-[#DDB549]" /> +15m
                           </button>
                         </div>
                       )}
                     </div>
                   )) : (
-                    <p className="py-4 text-xs text-[#7B91A5]">{loading ? common("loading") : t("noVerifiedData")}</p>
+                    <p className="py-4 text-xs text-[#9AA5B4]">{loading ? common("loading") : t("noVerifiedData")}</p>
                   )}
                 </div>
               </div>
 
-              {/* 2. Prominent Teal AI Health Assistant Card */}
-              <div className="bg-gradient-to-br from-[#087F8C] to-[#07545B] rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
+              {/* 2. Prominent Navy & Gold AI Health Assistant Card */}
+              <div className="bg-gradient-to-br from-[#08193C] via-[#0C2353] to-[#08193C] border border-[#D4E1EE]/20 rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 border border-[#DDB549]/30 flex items-center justify-center text-[#DDB549] shrink-0">
                     <Bot className="w-6 h-6" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white">{t("aiAssistantCardTitle")}</h3>
-                    <p className="text-[10px] text-teal-100 mt-0.5 leading-snug">
+                    <p className="text-[10px] text-[#D4E1EE] mt-0.5 leading-snug">
                       {t("aiAssistantCardDesc")}
                     </p>
                   </div>
@@ -1490,7 +1490,7 @@ export default function DashboardPage() {
 
                 <Link
                   href="/assistant"
-                  className="mt-4 w-full py-2.5 px-4 rounded-xl bg-white hover:bg-teal-50 text-[#087F8C] text-xs font-bold shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="mt-4 w-full py-2.5 px-4 rounded-xl bg-[#DDB549] hover:bg-[#E5C25F] text-[#08193C] text-xs font-bold shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   {t("startConversation")} <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
@@ -1500,28 +1500,28 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => handlePromptClick(t("chipExplainReport"))}
-                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 transition-colors cursor-pointer"
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 text-white transition-colors cursor-pointer"
                   >
                     {t("chipExplainReport")}
                   </button>
                   <button
                     type="button"
                     onClick={() => handlePromptClick(t("chipSummarizeRecords"))}
-                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 transition-colors cursor-pointer"
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 text-white transition-colors cursor-pointer"
                   >
                     {t("chipSummarizeRecords")}
                   </button>
                   <button
                     type="button"
                     onClick={() => handlePromptClick(t("chipWhatMeans"))}
-                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 transition-colors cursor-pointer"
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 text-white transition-colors cursor-pointer"
                   >
                     {t("chipWhatMeans")}
                   </button>
                   <button
                     type="button"
                     onClick={() => handlePromptClick(t("chipDoctorQuestions"))}
-                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 transition-colors cursor-pointer"
+                    className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-left font-medium border border-white/15 text-white transition-colors cursor-pointer"
                   >
                     {t("chipDoctorQuestions")}
                   </button>
@@ -1529,57 +1529,57 @@ export default function DashboardPage() {
               </div>
 
               {/* 3. Quick Actions 2x2 Grid */}
-              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs">
-                <div className="flex items-center gap-2 pb-2.5 border-b border-[#E2EDF4]">
-                  <Zap className="w-4 h-4 text-[#087F8C]" />
-                  <h3 className="text-xs font-bold text-[#142E4D]">{t("quickActionsTitle")}</h3>
+              <div className="bg-white border border-[#D4E1EE] rounded-2xl p-4 shadow-2xs">
+                <div className="flex items-center gap-2 pb-2.5 border-b border-[#D4E1EE]">
+                  <Zap className="w-4 h-4 text-[#08193C]" />
+                  <h3 className="text-xs font-bold text-[#08193C]">{t("quickActionsTitle")}</h3>
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2.5">
                   <Link
                     href="/reports"
-                    className="p-3 bg-[#F7FAFC] border border-[#E2EDF4] hover:border-[#087F8C]/40 hover:bg-white rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
+                    className="p-3 bg-[#FDFEFE] border border-[#D4E1EE] hover:border-[#DDB549] hover:bg-[#EDF3F7] rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-[#E4F1FF] text-[#087F8C] flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="w-8 h-8 rounded-lg bg-[#EDF3F7] text-[#08193C] flex items-center justify-center group-hover:scale-105 transition-transform">
                       <Upload className="w-4 h-4" />
                     </div>
-                    <span className="text-[11px] font-bold text-[#142E4D] text-center leading-tight">
+                    <span className="text-[11px] font-bold text-[#08193C] text-center leading-tight">
                       {t("qaUploadReport")}
                     </span>
                   </Link>
 
                   <Link
                     href="/prescriptions"
-                    className="p-3 bg-[#F7FAFC] border border-[#E2EDF4] hover:border-[#087F8C]/40 hover:bg-white rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
+                    className="p-3 bg-[#FDFEFE] border border-[#D4E1EE] hover:border-[#DDB549] hover:bg-[#EDF3F7] rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-[#DDF5F1] text-[#087F8C] flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="w-8 h-8 rounded-lg bg-[#EDF3F7] text-[#08193C] flex items-center justify-center group-hover:scale-105 transition-transform">
                       <Pill className="w-4 h-4" />
                     </div>
-                    <span className="text-[11px] font-bold text-[#142E4D] text-center leading-tight">
+                    <span className="text-[11px] font-bold text-[#08193C] text-center leading-tight">
                       {t("qaAddPrescription")}
                     </span>
                   </Link>
 
                   <Link
                     href="/find-care"
-                    className="p-3 bg-[#F7FAFC] border border-[#E2EDF4] hover:border-[#087F8C]/40 hover:bg-white rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
+                    className="p-3 bg-[#FDFEFE] border border-[#D4E1EE] hover:border-[#DDB549] hover:bg-[#EDF3F7] rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-[#FFF0DC] text-[#F59A35] flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="w-8 h-8 rounded-lg bg-[#EDF3F7] text-[#DDB549] flex items-center justify-center group-hover:scale-105 transition-transform">
                       <MapPin className="w-4 h-4" />
                     </div>
-                    <span className="text-[11px] font-bold text-[#142E4D] text-center leading-tight">
+                    <span className="text-[11px] font-bold text-[#08193C] text-center leading-tight">
                       {t("qaFindNearbyCare")}
                     </span>
                   </Link>
 
                   <Link
                     href="/analytics"
-                    className="p-3 bg-[#F7FAFC] border border-[#E2EDF4] hover:border-[#087F8C]/40 hover:bg-white rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
+                    className="p-3 bg-[#FDFEFE] border border-[#D4E1EE] hover:border-[#DDB549] hover:bg-[#EDF3F7] rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-[#F3E8FF] text-[#8B5CE8] flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="w-8 h-8 rounded-lg bg-[#EDF3F7] text-[#08193C] flex items-center justify-center group-hover:scale-105 transition-transform">
                       <BarChart3 className="w-4 h-4" />
                     </div>
-                    <span className="text-[11px] font-bold text-[#142E4D] text-center leading-tight">
+                    <span className="text-[11px] font-bold text-[#08193C] text-center leading-tight">
                       {t("viewAnalytics")}
                     </span>
                   </Link>
@@ -1589,16 +1589,16 @@ export default function DashboardPage() {
           </div>
 
           {/* Discreet Footer */}
-          <footer className="mt-8 pt-4 border-t border-[#E2EDF4] flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#7B91A5] gap-2 pb-6">
+          <footer className="mt-8 pt-4 border-t border-[#D4E1EE] flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#465978] gap-2 pb-6">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-[#087F8C]">AyuvSaathi</span>
+              <span className="font-bold text-[#08193C]">AyuvSaathi</span>
               <span>|</span>
               <span>{common("tagline")}</span>
             </div>
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#28AD65]" />
+              <ShieldCheck className="w-4 h-4 text-[#DDB549]" />
               <span>{t("dataSafe")}</span>
-              <Activity className="w-4 h-4 text-[#087F8C] ml-1" />
+              <Activity className="w-4 h-4 text-[#08193C] ml-1" />
             </div>
           </footer>
           </div>

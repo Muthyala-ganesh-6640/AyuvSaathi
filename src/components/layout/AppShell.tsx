@@ -40,7 +40,7 @@ export function AppShell({ children, showSidebar = true }: AppShellProps) {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F7FAFC] text-[#17344F] font-sans antialiased">
+    <div className="min-h-screen flex flex-col bg-[#FDFEFE] text-[#08193C] font-sans antialiased selection:bg-[#EDF3F7] selection:text-[#08193C]">
       <Navbar
         user={user}
         onRefresh={fetchUser}
