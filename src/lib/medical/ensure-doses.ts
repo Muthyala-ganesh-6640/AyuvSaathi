@@ -1,6 +1,6 @@
 import { store } from "@/lib/db/file-store";
 import type { Profile } from "@/lib/db/types";
-import { addDays, buildDoseKey, isPastSlot, localDateKey } from "./schedules";
+import { addDays, buildDoseKey, isPastSlot, localDateKey, isCourseEnded } from "./schedules";
 import { nowIso } from "@/lib/utils";
 
 export async function ensureUpcomingDoses(user: Profile, days = 7) {
@@ -15,9 +15,24 @@ export async function ensureUpcomingDoses(user: Profile, days = 7) {
   const start = localDateKey(new Date(), tz);
 
   for (const schedule of schedules) {
-    if (!schedule.enabled) continue;
     const med = medById.get(schedule.medicationId);
-    if (!med || med.status !== "active" || med.confirmationStatus !== "confirmed") continue;
+    if (!med) continue;
+
+    // Course conclusion check: stop reminders when course ends
+    const endDate = schedule.endDate || med.endDate;
+    if (endDate && isCourseEnded(endDate, tz)) {
+      if (med.status === "active") {
+        await store.saveMedication({ ...med, status: "completed", updatedAt: nowIso() });
+      }
+      if (schedule.enabled) {
+        await store.saveSchedule({ ...schedule, enabled: false, updatedAt: nowIso() });
+      }
+      continue;
+    }
+
+    if (!schedule.enabled) continue;
+    if (med.status !== "active" || med.confirmationStatus !== "confirmed") continue;
+
     for (let i = 0; i < days; i++) {
       const date = addDays(start, i);
       if (date < schedule.startDate) continue;

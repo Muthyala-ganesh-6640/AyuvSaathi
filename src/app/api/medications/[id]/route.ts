@@ -11,6 +11,8 @@ const patchSchema = z.object({
   route: z.string().max(100).optional(),
   status: z.enum(["active", "paused", "completed"]).optional(),
   confirmationStatus: z.enum(["unconfirmed", "confirmed", "rejected"]).optional(),
+  times: z.array(z.string()).optional(),
+  endDate: z.string().optional(),
 });
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -38,13 +40,46 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const parsed = patchSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return jsonError("Invalid update data.", 400);
 
+  const now = nowIso();
   const updated = await store.saveMedication({
     ...existing,
-    ...parsed.data,
-    updatedAt: nowIso(),
+    name: parsed.data.name ?? existing.name,
+    strength: parsed.data.strength ?? existing.strength,
+    instructions: parsed.data.instructions ?? existing.instructions,
+    route: parsed.data.route ?? existing.route,
+    status: parsed.data.status ?? existing.status,
+    confirmationStatus: parsed.data.confirmationStatus ?? existing.confirmationStatus,
+    endDate: parsed.data.endDate ?? existing.endDate,
+    updatedAt: now,
   });
 
-  return Response.json({ medication: updated });
+  // Synchronize associated schedule
+  const schedules = await store.listSchedules(auth.user.id);
+  const schedule = schedules.find((s) => s.medicationId === id);
+  let updatedSchedule = schedule;
+
+  if (schedule) {
+    const isCompleted = parsed.data.status === "completed";
+    const isPaused = parsed.data.status === "paused";
+    const isEnabled = isCompleted || isPaused ? false : schedule.enabled;
+
+    updatedSchedule = await store.saveSchedule({
+      ...schedule,
+      times: parsed.data.times && parsed.data.times.length > 0 ? parsed.data.times : schedule.times,
+      endDate: parsed.data.endDate ?? schedule.endDate,
+      enabled: isEnabled,
+      updatedAt: now,
+    });
+  }
+
+  return Response.json({
+    ok: true,
+    medication: updated,
+    schedule: updatedSchedule,
+    message: parsed.data.status === "completed"
+      ? "Course concluded. Medicine reminders stopped."
+      : "Medication and reminder schedule updated.",
+  });
 }
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {

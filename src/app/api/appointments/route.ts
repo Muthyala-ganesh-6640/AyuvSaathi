@@ -16,7 +16,34 @@ export async function GET(request: NextRequest) {
   if ("response" in auth) return auth.response;
 
   const appointments = await store.listAppointments(auth.user.id);
-  return Response.json({ appointments });
+
+  // Check for upcoming appointments (within next 48 hours) to ensure reminder notification exists
+  const now = Date.now();
+  for (const appt of appointments) {
+    if (appt.status !== "scheduled") continue;
+    const diffHours = (new Date(appt.startsAt).getTime() - now) / (1000 * 60 * 60);
+    if (diffHours > 0 && diffHours <= 48) {
+      const existingNotifs = await store.listNotifications(auth.user.id);
+      const hasNotif = existingNotifs.some(
+        (n) => n.link === "/appointments" && n.message.includes(appt.title)
+      );
+      if (!hasNotif) {
+        await store.createNotification({
+          id: crypto.randomUUID(),
+          userId: auth.user.id,
+          patientProfileId: auth.user.id,
+          title: "Upcoming Appointment Reminder",
+          message: `Reminder: You have "${appt.title}" scheduled at ${appt.facility || "Clinic"} on ${new Date(appt.startsAt).toLocaleDateString()}.`,
+          type: "appointment",
+          link: "/appointments",
+          read: false,
+          createdAt: nowIso(),
+        });
+      }
+    }
+  }
+
+  return Response.json({ ok: true, appointments });
 }
 
 export async function POST(request: NextRequest) {
@@ -51,5 +78,17 @@ export async function POST(request: NextRequest) {
     createdAt: now,
   });
 
-  return Response.json({ appointment });
+  await store.createNotification({
+    id: crypto.randomUUID(),
+    userId: auth.user.id,
+    patientProfileId: auth.user.id,
+    title: "Appointment Reminder Scheduled",
+    message: `Reminder set for ${appointment.title} on ${new Date(appointment.startsAt).toLocaleDateString()}.`,
+    type: "appointment",
+    link: "/appointments",
+    read: false,
+    createdAt: now,
+  });
+
+  return Response.json({ ok: true, appointment });
 }

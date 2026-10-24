@@ -4,6 +4,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { UniversalPatientQR } from "@/components/qr/UniversalPatientQR";
+import type { WellnessProfileAnalysis, WellnessRecommendation } from "@/lib/medical/wellness";
 import { FamilyProfileSwitcher } from "@/components/family/FamilyProfileSwitcher";
 import { NotificationsDrawer } from "@/components/notifications/NotificationsDrawer";
 import {
@@ -29,6 +30,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Check,
+  Clock,
   Sparkles,
   ChevronRight,
   Zap,
@@ -70,6 +72,8 @@ interface DashboardData {
     scheduledTime: string;
     status: "pending" | "taken" | "skipped" | "missed";
     synthetic?: boolean;
+    strength?: string;
+    instructions?: string;
   }[];
   documents: {
     id: string;
@@ -217,6 +221,7 @@ interface DashboardData {
     createdAt: string;
   }[];
   unreadNotificationsCount?: number;
+  wellnessAnalysis?: WellnessProfileAnalysis;
 }
 
 export default function DashboardPage() {
@@ -238,6 +243,9 @@ export default function DashboardPage() {
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [emergencyModalOpen, setEmergencyModalOpen] = useState(false);
   const [selectedDoctorForEmergency, setSelectedDoctorForEmergency] = useState<any>(null);
+  const [selectedWellnessCategory, setSelectedWellnessCategory] = useState<"all" | "diet" | "activity" | "sleep" | "habits">("all");
+
+
   const [emergencyText, setEmergencyText] = useState("");
   const [sendingEmergency, setSendingEmergency] = useState(false);
 
@@ -284,6 +292,43 @@ export default function DashboardPage() {
       setLoading(false);
     }
   }, [router, activeProfileId]);
+
+  const handleConfirmDose = async (doseId: string) => {
+    try {
+      const res = await fetch(`/api/doses/${doseId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "taken" }),
+      });
+      if (res.ok) {
+        toast.success("Dose confirmed as taken!");
+        fetchDashboard(activeProfileId);
+      } else {
+        toast.error("Could not update dose");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+  };
+
+  const handleSnoozeDose = async (doseId: string, snoozeMinutes: number) => {
+    try {
+      const res = await fetch(`/api/doses/${doseId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ snoozeMinutes }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        toast.success(d.message || `Dose snoozed by ${snoozeMinutes} mins`);
+        fetchDashboard(activeProfileId);
+      } else {
+        toast.error("Could not snooze dose");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+  };
 
   const handleProfileSwitch = (newProfileId: string) => {
     setActiveProfileId(newProfileId);
@@ -406,18 +451,26 @@ export default function DashboardPage() {
   // Show only reminders based on the user's actual scheduled doses.
   const dynamicReminders =
     data?.medicines && data.medicines.length > 0
-      ? data.medicines.slice(0, 3).map((med, idx) => {
+      ? data.medicines.slice(0, 4).map((med, idx) => {
           const isTaken = med.status === "taken";
+          const isPending = med.status === "pending";
           return {
             id: med.id,
             name: med.medicationName,
-            instruction: `${med.scheduledTime} · Scheduled Dose`,
-            status: isTaken ? t("taken") : t("upcoming"),
+            instruction: `${med.scheduledTime} · ${med.strength ? med.strength + " · " : ""}Scheduled Dose`,
+            status: isTaken ? t("taken") : isPending ? t("upcoming") : med.status.toUpperCase(),
+            isPending,
             badgeColor: isTaken ? "bg-[#D9F8E8] text-[#1E824C]" : "bg-[#E4F1FF] text-[#206bc4]",
             iconBg: idx === 0 ? "bg-[#DDF5F1] text-[#087F8C]" : idx === 1 ? "bg-[#FFF0DC] text-[#F59A35]" : "bg-[#FFE7E9] text-[#E03131]",
           };
         })
       : [];
+
+  const allWellnessRecs = data?.wellnessAnalysis?.recommendations || [];
+  const filteredWellnessRecs =
+    selectedWellnessCategory === "all"
+      ? allWellnessRecs
+      : allWellnessRecs.filter((r) => r.category === selectedWellnessCategory);
 
   // Dynamic Recent Activity mapped strictly from genuine chronological events
   const dynamicActivities =
@@ -1182,6 +1235,130 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              {/* Personalized Wellness Recommendations (Section 3.3 of Specification) */}
+              <div className="bg-white border border-[#E2EDF4] rounded-2xl p-5 shadow-2xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E2EDF4] gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-5 h-5 text-teal-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-bold text-[#142E4D]">
+                        Personalized Wellness & Lifestyle Guidance
+                      </h3>
+                      <p className="text-[11px] text-[#7B91A5]">
+                        Tailored lifestyle advice based on your conditions, test values, and age.
+                      </p>
+                    </div>
+                  </div>
+                  {data?.wellnessAnalysis && (
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
+                      <span className="text-[11px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full">
+                        Wellness Vitality Score: {data.wellnessAnalysis.overallWellnessScore}/100
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Category Filter Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+                  {(["all", "diet", "activity", "sleep", "habits"] as const).map((cat) => {
+                    const active = selectedWellnessCategory === cat;
+                    const labels: Record<string, string> = {
+                      all: `All Recommendations (${allWellnessRecs.length})`,
+                      diet: "🥗 Diet & Nutrition",
+                      activity: "🏃 Physical Activity",
+                      sleep: "🌙 Sleep & Rest",
+                      habits: "✨ Habits & Monitoring",
+                    };
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setSelectedWellnessCategory(cat)}
+                        className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer text-xs ${
+                          active
+                            ? "bg-white text-teal-800 font-bold shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        {labels[cat]}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Recommendations List */}
+                <div className="grid grid-cols-1 gap-3.5 pt-1">
+                  {filteredWellnessRecs.length > 0 ? (
+                    filteredWellnessRecs.map((rec) => (
+                      <div
+                        key={rec.id}
+                        className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-colors space-y-2.5"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-teal-100 text-teal-800">
+                              {rec.category}
+                            </span>
+                            <h4 className="font-bold text-xs sm:text-sm text-[#142E4D]">
+                              {rec.title}
+                            </h4>
+                          </div>
+                          <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 self-start sm:self-auto">
+                            {rec.evidenceTag}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-700 leading-relaxed font-normal">
+                          {rec.advice}
+                        </p>
+
+                        {/* Why this is recommended for you */}
+                        <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-950 space-y-1">
+                          <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>Why this is recommended for you:</span>
+                          </div>
+                          <p className="text-[11px] text-amber-900/90 leading-relaxed pl-5">
+                            {rec.whyRecommended}
+                          </p>
+                        </div>
+
+                        {/* Action Steps */}
+                        {rec.actionSteps && rec.actionSteps.length > 0 && (
+                          <div className="space-y-1 pt-1">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                              Actionable Steps:
+                            </p>
+                            <div className="space-y-1">
+                              {rec.actionSteps.map((step, sIdx) => (
+                                <div key={sIdx} className="flex items-start gap-2 text-xs text-slate-600">
+                                  <Check className="w-3.5 h-3.5 text-teal-600 mt-0.5 shrink-0" />
+                                  <span>{step}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-xl">
+                      No recommendations found in this category.
+                    </div>
+                  )}
+                </div>
+
+                {/* Wellness Safety Disclaimer */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    <strong>General Wellness Advice:</strong> These personalized suggestions provide general lifestyle, diet, and wellness tips based on your health records. Please consult with your physician before beginning any new exercise or dietary regimen.
+                  </p>
+                </div>
+              </div>
+
               {/* 7. Pharmacy Dispensed Medications & Bills (Section 17 of Specification) */}
               <div className="bg-white border border-[#E2EDF4] rounded-2xl p-4 shadow-2xs space-y-3">
                 <div className="flex items-center justify-between pb-2.5 border-b border-[#E2EDF4]">
@@ -1253,20 +1430,42 @@ export default function DashboardPage() {
                   {dynamicReminders.length > 0 ? dynamicReminders.map((med) => (
                     <div
                       key={med.id}
-                      className="p-2.5 rounded-xl border border-[#E2EDF4] bg-[#F7FAFC] flex items-center justify-between"
+                      className="p-2.5 rounded-xl border border-[#E2EDF4] bg-[#F7FAFC] hover:bg-white transition-colors space-y-2"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-8 h-8 rounded-lg ${med.iconBg} flex items-center justify-center shrink-0 font-bold`}>
-                          <Pill className="w-4 h-4" />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-lg ${med.iconBg} flex items-center justify-center shrink-0 font-bold`}>
+                            <Pill className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-[#142E4D] leading-tight">{med.name}</p>
+                            <p className="text-[10px] text-[#7B91A5] mt-0.5">{med.instruction}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-bold text-[#142E4D] leading-tight">{med.name}</p>
-                          <p className="text-[10px] text-[#7B91A5] mt-0.5">{med.instruction}</p>
-                        </div>
+                        <span className={`px-2 py-0.5 ${med.badgeColor} text-[10px] font-bold rounded-full`}>
+                          {med.status}
+                        </span>
                       </div>
-                      <span className={`px-2 py-0.5 ${med.badgeColor} text-[10px] font-bold rounded-full`}>
-                        {med.status}
-                      </span>
+
+                      {med.isPending && (
+                        <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200/60">
+                          <button
+                            type="button"
+                            onClick={() => handleConfirmDose(med.id)}
+                            className="flex-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+                          >
+                            <Check className="w-3 h-3" /> Taken
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSnoozeDose(med.id, 15)}
+                            className="py-1 px-2 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-[10px] font-semibold transition-colors cursor-pointer flex items-center gap-0.5"
+                            title="Snooze reminder by 15 mins"
+                          >
+                            <Clock className="w-3 h-3 text-amber-600" /> +15m
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )) : (
                     <p className="py-4 text-xs text-[#7B91A5]">{loading ? common("loading") : t("noVerifiedData")}</p>

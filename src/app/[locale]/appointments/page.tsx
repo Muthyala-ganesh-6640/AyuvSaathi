@@ -11,6 +11,8 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
+  Edit2,
+  Bell,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/utils";
@@ -40,6 +42,13 @@ export default function AppointmentsPage() {
   const [dateTime, setDateTime] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Edit appointment modal
+  const [editingAppt, setEditingAppt] = useState<AppointmentItem | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editFacility, setEditFacility] = useState("");
+  const [editDateTime, setEditDateTime] = useState("");
+  const [editNotes, setEditNotes] = useState("");
 
   const fetchAppointments = useCallback(async () => {
     try {
@@ -83,7 +92,7 @@ export default function AppointmentsPage() {
         }),
       });
       if (res.ok) {
-        toast.success("Appointment scheduled!");
+        toast.success("Appointment & reminder scheduled!");
         setShowModal(false);
         setTitle("");
         setFacility("");
@@ -110,6 +119,46 @@ export default function AppointmentsPage() {
       if (res.ok) {
         toast.success(`Marked as ${status}`);
         fetchAppointments();
+      } else {
+        toast.error("Network error");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+  };
+
+  const openEditModal = (appt: AppointmentItem) => {
+    setEditingAppt(appt);
+    setEditTitle(appt.title);
+    setEditFacility(appt.facility || "");
+    // format to YYYY-MM-DDTHH:mm for datetime-local input
+    const d = new Date(appt.startsAt);
+    const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    setEditDateTime(localIso);
+    setEditNotes(appt.notes || "");
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAppt) return;
+
+    try {
+      const res = await fetch(`/api/appointments/${editingAppt.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle,
+          facility: editFacility,
+          startsAt: new Date(editDateTime).toISOString(),
+          notes: editNotes,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Appointment reminder updated!");
+        setEditingAppt(null);
+        fetchAppointments();
+      } else {
+        toast.error("Failed to update appointment");
       }
     } catch {
       toast.error("Network error");
@@ -144,7 +193,7 @@ export default function AppointmentsPage() {
               </h1>
             </div>
             <p className="text-xs sm:text-sm text-[#61768A]">
-              Keep track of doctor consultations, lab tests, and hospital follow-up visits.
+              Timely reminders for doctor consultations, lab tests, and clinical follow-up visits.
             </p>
           </div>
 
@@ -158,11 +207,11 @@ export default function AppointmentsPage() {
         </div>
 
         {/* Appointments List */}
-        <div className="bg-white rounded-xl border border-[#E1EBF0] shadow-xs overflow-hidden">
+        <div className="bg-white rounded-2xl border border-[#E1EBF0] shadow-xs overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-[#E9F0F3] flex items-center justify-between">
             <h3 className="font-bold text-sm sm:text-base text-[#17344F] flex items-center gap-2">
               <Calendar className="w-5 h-5 text-[#087F8C]" />
-              Scheduled Consultations & Tests
+              Scheduled Consultations & Follow-up Reminders
             </h3>
             <span className="text-xs text-gray-500 font-medium">
               {appointments.length} record{appointments.length === 1 ? "" : "s"}
@@ -177,7 +226,7 @@ export default function AppointmentsPage() {
               <button
                 type="button"
                 onClick={() => setShowModal(true)}
-                className="text-[#087F72] font-semibold hover:underline inline-block text-xs"
+                className="text-[#087F72] font-semibold hover:underline inline-block text-xs cursor-pointer"
               >
                 + Schedule an appointment
               </button>
@@ -206,8 +255,8 @@ export default function AppointmentsPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="flex items-center gap-1.5 font-semibold text-blue-900">
+                        <Clock className="w-3.5 h-3.5 text-blue-600" />
                         {formatDateTime(appt.startsAt, locale)}
                       </span>
                       {appt.facility && (
@@ -226,19 +275,33 @@ export default function AppointmentsPage() {
                   </div>
 
                   <div className="flex items-center gap-2 self-start sm:self-center">
+                    {/* Edit Appointment */}
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(appt)}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-700 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Edit Appointment Details"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 text-gray-500" /> Edit
+                    </button>
+
+                    {/* Mark Completed */}
                     {appt.status === "scheduled" && (
                       <button
                         type="button"
                         onClick={() => handleUpdateStatus(appt.id, "completed")}
-                        className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 text-xs font-semibold text-gray-700 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                        className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold text-emerald-800 inline-flex items-center gap-1 cursor-pointer transition-colors"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Mark Completed
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Complete
                       </button>
                     )}
+
+                    {/* Delete */}
                     <button
                       type="button"
                       onClick={() => handleDelete(appt.id)}
                       className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                      title="Delete Appointment"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -261,14 +324,14 @@ export default function AppointmentsPage() {
               <form onSubmit={handleCreateAppointment} className="space-y-3 pt-2">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Appointment Title *
+                    {t("eventTitle")} *
                   </label>
                   <input
                     type="text"
                     required
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Cardiologist Follow-up or Fasting Blood Test"
+                    placeholder="e.g. Cardiologist Follow-up with Dr. Srinivas"
                     className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] outline-hidden"
                   />
                 </div>
@@ -281,7 +344,7 @@ export default function AppointmentsPage() {
                     type="text"
                     value={facility}
                     onChange={(e) => setFacility(e.target.value)}
-                    placeholder="e.g. Apollo Hospitals / Care Clinic"
+                    placeholder="e.g. Apollo Health City, Jubilee Hills"
                     className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] outline-hidden"
                   />
                 </div>
@@ -307,7 +370,7 @@ export default function AppointmentsPage() {
                     rows={2}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="e.g. Remember to fast for 8 hours before test"
+                    placeholder="e.g. Bring fasting lab reports and previous prescription"
                     className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-[#087F72] outline-hidden resize-none"
                   />
                 </div>
@@ -326,6 +389,86 @@ export default function AppointmentsPage() {
                     className="px-4 py-2 rounded-xl bg-[#087F72] hover:bg-[#06665B] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                   >
                     {saving ? common("loading") : common("save")}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Appointment Modal */}
+        {editingAppt && (
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
+              <h3 className="text-lg font-bold text-[#172B3A]">Edit Appointment Reminder</h3>
+              <p className="text-xs text-gray-500">
+                Update consultation details, facility, or scheduled date/time.
+              </p>
+
+              <form onSubmit={handleSaveEdit} className="space-y-3 pt-2">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Appointment Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-teal-600 outline-hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Facility / Clinic
+                  </label>
+                  <input
+                    type="text"
+                    value={editFacility}
+                    onChange={(e) => setEditFacility(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-teal-600 outline-hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Date & Time *
+                  </label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={editDateTime}
+                    onChange={(e) => setEditDateTime(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-teal-600 outline-hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Notes
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-teal-600 outline-hidden resize-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditingAppt(null)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  >
+                    Save Changes
                   </button>
                 </div>
               </form>

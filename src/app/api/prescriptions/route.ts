@@ -4,6 +4,14 @@ import { requireUser } from "@/lib/auth/session";
 import { store } from "@/lib/db/file-store";
 import { jsonError } from "@/lib/api";
 import { canAccessPatientData } from "@/lib/auth/authorization";
+import {
+  frequencyToTimes,
+  parseCourseDates,
+  durationToDays,
+  addDays,
+  localDateKey,
+} from "@/lib/medical/schedules";
+import { ensureUpcomingDoses } from "@/lib/medical/ensure-doses";
 import type { DoctorPrescription, Medication, TimelineEvent, AppNotification, AuditLogEntry } from "@/lib/db/types";
 
 const prescriptionSchema = z.object({
@@ -100,14 +108,24 @@ export async function POST(request: NextRequest) {
 
     await store.savePrescription(prescription);
 
-    // Synchronize items with patient's active Medication store
+    // Synchronize items with patient's active Medication store & Schedules
+    const patientProfile = (await store.getProfile(parsed.data.patientProfileId)) || user;
+    const tz = patientProfile.timezone || "Asia/Kolkata";
+    const today = localDateKey(new Date(), tz);
+
     for (const item of parsed.data.items) {
+      const { startDate, endDate } = parseCourseDates(item.duration, today, tz);
+      const times = frequencyToTimes(item.frequency);
+      const medId = crypto.randomUUID();
+
       const med: Medication = {
-        id: crypto.randomUUID(),
+        id: medId,
         ownerId: parsed.data.patientProfileId,
         name: item.medicineName,
         strength: item.dosage,
         instructions: `${item.frequency} for ${item.duration}. ${item.instructions}`,
+        startDate,
+        endDate,
         status: "active",
         confirmationStatus: "confirmed",
         provenance: "synthetic_demo",
@@ -116,6 +134,54 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
       };
       await store.saveMedication(med);
+
+      // Save Medication Schedule so dose events are automatically generated
+      await store.saveSchedule({
+        id: crypto.randomUUID(),
+        medicationId: medId,
+        ownerId: parsed.data.patientProfileId,
+        times,
+        timezone: tz,
+        startDate,
+        endDate,
+        enabled: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    // Generate upcoming doses for patient
+    await ensureUpcomingDoses(patientProfile, 7);
+
+    // Check for follow-up advice in prescription notes
+    if (parsed.data.notes && /follow[\s-]?up|review|visit|after\s+\d+\s+(day|week|month)/i.test(parsed.data.notes)) {
+      const followUpDays = durationToDays(parsed.data.notes) || 14;
+      const followUpDate = addDays(today, followUpDays);
+      const appointmentId = crypto.randomUUID();
+      await store.saveAppointment({
+        id: appointmentId,
+        ownerId: parsed.data.patientProfileId,
+        title: `Clinical Follow-up with ${user.displayName}`,
+        facility: user.doctorProfile?.hospitalClinicName || "Clinic Consultation",
+        startsAt: `${followUpDate}T10:00:00.000Z`,
+        timezone: tz,
+        status: "scheduled",
+        notes: `Prescription follow-up: ${parsed.data.notes}`,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await store.createNotification({
+        id: crypto.randomUUID(),
+        userId: primaryUserId,
+        patientProfileId: parsed.data.patientProfileId,
+        title: "Follow-up Consultation Scheduled",
+        message: `Dr. ${user.displayName} advised a follow-up consultation on ${followUpDate}. Automatically added to your appointments.`,
+        type: "appointment",
+        link: "/appointments",
+        read: false,
+        createdAt: now,
+      });
     }
 
     // Add Timeline Event
@@ -138,9 +204,9 @@ export async function POST(request: NextRequest) {
       userId: primaryUserId,
       patientProfileId: parsed.data.patientProfileId,
       title: "New Clinical Prescription Received",
-      message: `${user.displayName} prescribed ${parsed.data.items.length} medication(s). Automatically added to your active medications and reminders.`,
+      message: `${user.displayName} prescribed ${parsed.data.items.length} medication(s). Medicine reminders have been set for your prescribed schedule.`,
       type: "prescription",
-      link: "/prescriptions",
+      link: "/reminders",
       read: false,
       createdAt: now,
     };
@@ -150,14 +216,16 @@ export async function POST(request: NextRequest) {
     const audit: AuditLogEntry = {
       id: crypto.randomUUID(),
       actorId: user.id,
-      actorRole: "doctor",
+      actorRole: user.role || "doctor",
       actorName: user.displayName,
       patientProfileId: parsed.data.patientProfileId,
       action: "prescription_created",
       details: {
-        prescriptionId,
+        resource: "prescriptions",
+        resourceId: prescriptionId,
         diagnosis: parsed.data.diagnosis,
-        medicineCount: parsed.data.items.length,
+        itemsCount: parsed.data.items.length,
+        prescribedBy: user.displayName,
       },
       timestamp: now,
     };
@@ -166,10 +234,10 @@ export async function POST(request: NextRequest) {
     return Response.json({
       ok: true,
       prescription,
-      message: "Prescription created and synchronized with patient records.",
+      message: "Prescription successfully recorded, synchronized to medications and active reminders.",
     });
-  } catch (error) {
-    console.error("Prescription creation error:", error);
-    return jsonError("Unauthorized or failed to create prescription", 401);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Error creating prescription";
+    return jsonError(message, 500);
   }
 }

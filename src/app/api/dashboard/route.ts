@@ -6,6 +6,7 @@ import { ensureUpcomingDoses } from "@/lib/medical/ensure-doses";
 import { localDateKey } from "@/lib/medical/schedules";
 import { serviceStatus } from "@/lib/env";
 import { canAccessPatientData } from "@/lib/auth/authorization";
+import { generateWellnessRecommendations } from "@/lib/medical/wellness";
 
 export async function GET(request: NextRequest) {
   const auth = await withUser(request);
@@ -92,6 +93,15 @@ export async function GET(request: NextRequest) {
     )
     .sort((a, b) => (a.sourceDate || a.createdAt).localeCompare(b.sourceDate || b.createdAt));
 
+  // Generate personalized wellness recommendations
+  const wellnessAnalysis = generateWellnessRecommendations(
+    user,
+    observations,
+    medications,
+    prescriptions,
+    visits
+  );
+
   return Response.json({
     user: publicProfile(user),
     activeProfile: {
@@ -111,6 +121,8 @@ export async function GET(request: NextRequest) {
     medicines: todaysDoses.map((d) => ({
       ...d,
       medicationName: medById.get(d.medicationId)?.name ?? "Medicine",
+      strength: medById.get(d.medicationId)?.strength ?? "",
+      instructions: medById.get(d.medicationId)?.instructions ?? "",
       synthetic: medById.get(d.medicationId)?.provenance === "synthetic_demo",
     })),
     documents: documents.slice(0, 8),
@@ -124,6 +136,7 @@ export async function GET(request: NextRequest) {
     upcomingAppointments: appointments.filter((a) => a.status === "scheduled").slice(0, 4),
     observationCount: observations.filter((o) => o.verificationStatus === "confirmed").length,
     glucoseObservations: glucoseObservations.slice(-7),
+    wellnessAnalysis,
     stats: {
       labReportsCount: labReports.length,
       remindersCount: todaysDoses.filter((d) => d.status === "pending").length,

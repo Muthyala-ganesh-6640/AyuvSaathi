@@ -71,6 +71,10 @@ export interface Profile {
   role?: UserRole;
   avatarUrl?: string;
   ayuvSaathiId?: string;
+  dateOfBirth?: string;
+  gender?: "male" | "female" | "other";
+  age?: number;
+  bloodGroup?: string;
   doctorProfile?: DoctorProfile;
   labTechProfile?: LabTechProfile;
   pharmacistProfile?: PharmacistProfile;
@@ -334,7 +338,7 @@ export interface AppNotification {
   patientProfileId: string;
   title: string;
   message: string;
-  type: "prescription" | "lab_report" | "pharmacy_bill" | "connection" | "emergency" | "general";
+  type: "prescription" | "lab_report" | "pharmacy_bill" | "connection" | "emergency" | "general" | "appointment";
   link?: string;
   read: boolean;
   createdAt: string;
