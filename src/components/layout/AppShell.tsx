@@ -13,6 +13,7 @@ interface AppShellProps {
 
 export function AppShell({ children, showSidebar = true }: AppShellProps) {
   const [user, setUser] = useState<{ displayName?: string; email?: string } | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const fetchUser = async () => {
     try {
@@ -34,16 +35,28 @@ export function AppShell({ children, showSidebar = true }: AppShellProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F7FAFC] text-[#17344F] font-sans antialiased">
-      <Navbar user={user} onRefresh={fetchUser} />
-      <div className="flex-1 flex w-full">
-        {user && showSidebar && (
-          <div className="hidden lg:block shrink-0">
-            <Sidebar />
-          </div>
+      <Navbar
+        user={user}
+        onRefresh={fetchUser}
+        isMenuOpen={isMenuOpen}
+        onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
+      />
+      <div className="flex-1 flex w-full relative">
+        {/* Collapsible Menu Drawer: Hidden by default, shown when Menu button is pressed */}
+        {user && showSidebar && isMenuOpen && (
+          <>
+            <div
+              className="fixed inset-0 top-[72px] bg-slate-900/40 backdrop-blur-2xs z-30 transition-opacity"
+              onClick={() => setIsMenuOpen(false)}
+            />
+            <div className="fixed top-[72px] left-0 bottom-0 z-40 bg-white shadow-2xl animate-in slide-in-from-left duration-200">
+              <Sidebar onClose={() => setIsMenuOpen(false)} />
+            </div>
+          </>
         )}
         <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-7 min-w-0 overflow-y-auto w-full">
           <MedicalDisclaimer className="mb-5 max-w-7xl" />
-          <div className="w-full max-w-7xl">{children}</div>
+          <div className="w-full max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
       {user && <MobileNav />}

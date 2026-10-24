@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useLocale } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { QRScannerModal } from "@/components/qr/QRScannerModal";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ import {
   IndianRupee,
   CreditCard,
   Printer,
+  ArrowRight,
 } from "lucide-react";
 
 export default function PharmacistDashboardPage() {
@@ -27,6 +29,8 @@ export default function PharmacistDashboardPage() {
 
   const [pharmUser, setPharmUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [accessiblePatients, setAccessiblePatients] = useState<any[]>([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [activePrescriptions, setActivePrescriptions] = useState<any[]>([]);
@@ -58,10 +62,57 @@ export default function PharmacistDashboardPage() {
         return;
       }
       setPharmUser(data.user);
+
+      // Fetch accessible patients directory
+      setLoadingPatients(true);
+      const patientsRes = await fetch("/api/professional/patients");
+      const patientsData = await patientsRes.json();
+      if (patientsData.ok) {
+        setAccessiblePatients(patientsData.patients || []);
+      }
     } catch {
       toast.error("Failed to load pharmacy workspace.");
     } finally {
       setLoading(false);
+      setLoadingPatients(false);
+    }
+  };
+
+  const selectPatientById = async (patientId: string) => {
+    try {
+      setLoadingPatients(true);
+      const res = await fetch(`/api/professional/patients?patientId=${encodeURIComponent(patientId)}`);
+      const d = await res.json();
+      if (d.ok) {
+        setSelectedPatient(d.patient);
+        setActivePrescriptions(d.prescriptions || []);
+        setActiveMeds(d.medications || []);
+        setPreviousBills(d.bills || []);
+        setActiveTab("billing");
+
+        if (d.prescriptions && d.prescriptions.length > 0) {
+          const latest = d.prescriptions[0];
+          setSelectedPrescriptionId(latest.id);
+          setPrescribingDoctorName(latest.doctorName);
+          if (latest.items && latest.items.length > 0) {
+            setBillItems(
+              latest.items.map((i: any) => ({
+                medicineName: `${i.medicineName} (${i.dosage})`,
+                quantity: 10,
+                unitPrice: 5.0,
+                totalPrice: 50.0,
+              }))
+            );
+          }
+        }
+        toast.success(`Selected patient ${d.patient.name} for pharmacy dispensing`);
+      } else {
+        toast.error(d.error || "Failed to load patient records");
+      }
+    } catch {
+      toast.error("Error loading patient records");
+    } finally {
+      setLoadingPatients(false);
     }
   };
 
@@ -242,21 +293,62 @@ export default function PharmacistDashboardPage() {
               </div>
             </div>
 
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              Prescription Consent Active
-            </span>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/dashboard"
+                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5"
+              >
+                <span>Patient Portal</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedPatient(null);
+                  setLastGeneratedBill(null);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-900 text-xs font-semibold cursor-pointer"
+              >
+                Switch Patient
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
-            <span>Please scan the patient's QR code to view active prescriptions and dispense medication.</span>
-            <button
-              type="button"
-              onClick={() => setIsScannerOpen(true)}
-              className="px-3 py-1.5 rounded-lg bg-amber-600 text-white font-bold text-xs cursor-pointer"
-            >
-              Scan Patient QR
-            </button>
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <span>Scan patient QR or select an authorized patient profile below to view active prescriptions and dispense medication.</span>
+              <button
+                type="button"
+                onClick={() => setIsScannerOpen(true)}
+                className="px-3 py-1.5 rounded-lg bg-amber-600 text-white font-bold text-xs cursor-pointer shrink-0"
+              >
+                Scan Patient QR
+              </button>
+            </div>
+
+            {/* Accessible Patient Directory */}
+            <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Authorized Patient Directory</h4>
+                <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                  {accessiblePatients.length} Registered
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                {accessiblePatients.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => selectPatientById(p.id)}
+                    className="p-3 text-left rounded-lg border border-slate-200 hover:border-amber-400 bg-slate-50 hover:bg-amber-50/50 transition-colors cursor-pointer group"
+                  >
+                    <div className="text-xs font-bold text-slate-800 group-hover:text-amber-900">{p.name}</div>
+                    <div className="text-[10px] font-mono text-amber-700">{p.ayuvSaathiId}</div>
+                    <div className="text-[10px] text-slate-500 mt-1">Prescriptions: {p.prescriptionsCount || 0}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

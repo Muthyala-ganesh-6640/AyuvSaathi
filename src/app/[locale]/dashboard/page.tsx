@@ -39,6 +39,9 @@ import {
   QrCode,
   MessageSquare,
   Phone,
+  Menu,
+  X,
+  FlaskConical,
 } from "lucide-react";
 import { useCallback, useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -228,6 +231,7 @@ export default function DashboardPage() {
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeProfileId, setActiveProfileId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<"3" | "6" | "12">("3");
@@ -465,8 +469,17 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#F7FAFC] text-[#142E4D] font-sans flex flex-col antialiased selection:bg-[#DDF5F1] selection:text-[#087F8C]">
       {/* Top Application Header: 72px high */}
       <header className="h-[72px] bg-white border-b border-[#E2EDF4] px-6 flex items-center justify-between sticky top-0 z-30">
-        {/* Left: Brand block aligned with 245px sidebar width */}
-        <div className="w-[235px] shrink-0 flex items-center">
+        {/* Left: Menu button + Brand block */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#E2EDF4] hover:bg-[#F7FAFC] text-[#142E4D] font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+            title={isMenuOpen ? "Close Menu" : "Open Menu"}
+          >
+            {isMenuOpen ? <X className="w-4 h-4 text-[#087F8C]" /> : <Menu className="w-4 h-4 text-[#087F8C]" />}
+            <span className="text-xs font-bold">{isMenuOpen ? "Close" : "Menu"}</span>
+          </button>
           <BrandLogo variant="header" href="/dashboard" />
         </div>
 
@@ -603,61 +616,157 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Main Container: Sidebar + Dashboard Content */}
-      <div className="flex-1 flex max-w-[1600px] w-full mx-auto">
-        {/* Left Sidebar: 245px fixed */}
-        <aside className="w-[245px] shrink-0 bg-white border-r border-[#E2EDF4] flex flex-col justify-between py-5 px-3 min-h-[calc(100vh-72px)] sticky top-[72px] self-start">
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
-                    item.active
-                      ? "bg-[#DDF5F1] text-[#087F8C]"
-                      : "text-[#58718B] hover:bg-[#F7FAFC] hover:text-[#142E4D]"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon
-                      className={`w-4 h-4 transition-colors ${
-                        item.active ? "text-[#087F8C]" : "text-[#7B91A5] group-hover:text-[#087F8C]"
-                      }`}
-                    />
-                    <span>{item.label}</span>
-                  </div>
-                  {item.badge !== undefined && (
-                    <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                        item.active ? "bg-[#087F8C] text-white" : "bg-[#E2EDF4] text-[#58718B]"
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+      {/* Main Container: Collapsible Menu Drawer + Dashboard Content */}
+      <div className="flex-1 flex max-w-[1600px] w-full mx-auto relative">
+        {/* Collapsible Menu Drawer: Hidden by default, shown when Menu button is pressed */}
+        {isMenuOpen && (
+          <>
+            <div
+              className="fixed inset-0 top-[72px] bg-slate-900/40 backdrop-blur-2xs z-30 transition-opacity"
+              onClick={() => setIsMenuOpen(false)}
+            />
+            <aside className="fixed top-[72px] left-0 bottom-0 z-40 w-[280px] bg-white border-r border-[#E2EDF4] flex flex-col justify-between py-5 px-3 shadow-2xl animate-in slide-in-from-left duration-200 overflow-y-auto">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-3 pb-2 border-b border-[#E2EDF4]">
+                  <span className="text-xs font-bold text-[#7B91A5] uppercase tracking-wider">Navigation Menu</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
 
-          {/* User ID card at bottom of sidebar matching screenshot */}
-          <div className="mt-6 pt-4 border-t border-[#E2EDF4]">
-            <div className="p-3 bg-[#F7FAFC] rounded-xl border border-[#E2EDF4] flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#17466B] text-white flex items-center justify-center text-xs font-bold shrink-0">
-                {displayName.charAt(0)}
+                <nav className="space-y-1">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsMenuOpen(false)}
+                        className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
+                          item.active
+                            ? "bg-[#DDF5F1] text-[#087F8C]"
+                            : "text-[#58718B] hover:bg-[#F7FAFC] hover:text-[#142E4D]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon
+                            className={`w-4 h-4 transition-colors ${
+                              item.active ? "text-[#087F8C]" : "text-[#7B91A5] group-hover:text-[#087F8C]"
+                            }`}
+                          />
+                          <span>{item.label}</span>
+                        </div>
+                        {item.badge !== undefined && (
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                              item.active ? "bg-[#087F8C] text-white" : "bg-[#E2EDF4] text-[#58718B]"
+                            }`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </nav>
+
+                {/* Connected Healthcare Portals in Menu */}
+                <div className="pt-3 border-t border-[#E2EDF4]">
+                  <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#7B91A5] mb-2">
+                    Care Team Dashboards
+                  </p>
+                  <div className="space-y-1">
+                    <Link
+                      href="/doctor"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-800 hover:bg-blue-50 transition-colors"
+                    >
+                      <Stethoscope className="w-4 h-4 text-blue-600" />
+                      <span>Doctor Workspace</span>
+                    </Link>
+                    <Link
+                      href="/lab"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-teal-800 hover:bg-teal-50 transition-colors"
+                    >
+                      <FlaskConical className="w-4 h-4 text-teal-600" />
+                      <span>Laboratory Portal</span>
+                    </Link>
+                    <Link
+                      href="/pharmacy"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50 transition-colors"
+                    >
+                      <Pill className="w-4 h-4 text-amber-600" />
+                      <span>Pharmacy Portal</span>
+                    </Link>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-[#142E4D] truncate">{displayName}</p>
-                <p className="text-[10px] text-[#7B91A5] truncate">AYUV-984210</p>
+
+              {/* Patient Identity QR card in menu */}
+              <div className="mt-6 pt-4 border-t border-[#E2EDF4]">
+                {data?.user && (
+                  <UniversalPatientQR
+                    patientProfileId={activeProfileId || data.activeProfile?.id || (data.user as any).id || ""}
+                    patientName={displayName}
+                    ayuvSaathiId={data.activeProfile?.ayuvSaathiId || "AYUV-LIVE"}
+                  />
+                )}
               </div>
+            </aside>
+          </>
+        )}
+
+        {/* Dashboard Canvas: Full-width when menu is closed */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-7 overflow-x-hidden w-full">
+          {/* Healthcare Ecosystem Connected Network Hub */}
+          <div className="mb-6 bg-gradient-to-r from-slate-900 via-[#17344F] to-[#0A2540] rounded-2xl p-4 sm:p-5 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/30">
+                  Authorized Healthcare Network
+                </span>
+                <span className="text-xs text-slate-300 font-mono">
+                  {data?.activeProfile?.ayuvSaathiId || "AYUV-LIVE"}
+                </span>
+              </div>
+              <h2 className="text-sm sm:text-base font-bold text-white">
+                One Secure Health Identity · Synchronized with Authorized Care Professionals
+              </h2>
+              <p className="text-xs text-slate-300 max-w-2xl">
+                Your medical records, lab reports, doctor summaries, and prescriptions are shared securely. Select an authorized portal to view the care provider experience:
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Link
+                href="/doctor"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 border border-blue-400/40 text-blue-200 hover:text-white text-xs font-bold transition-all shadow-xs"
+              >
+                <Stethoscope className="w-3.5 h-3.5 text-blue-300" />
+                <span>Doctor Portal</span>
+              </Link>
+              <Link
+                href="/lab"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-600/30 hover:bg-teal-600/50 border border-teal-400/40 text-teal-200 hover:text-white text-xs font-bold transition-all shadow-xs"
+              >
+                <FlaskConical className="w-3.5 h-3.5 text-teal-300" />
+                <span>Diagnostic Lab</span>
+              </Link>
+              <Link
+                href="/pharmacy"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-600/30 hover:bg-amber-600/50 border border-amber-400/40 text-amber-200 hover:text-white text-xs font-bold transition-all shadow-xs"
+              >
+                <Pill className="w-3.5 h-3.5 text-amber-300" />
+                <span>Pharmacy Portal</span>
+              </Link>
             </div>
           </div>
-        </aside>
-
-        {/* Dashboard Canvas: Main Dashboard (885px) + Right Utility Column (352px) */}
-        <main className="flex-1 p-5 overflow-x-hidden">
           <div className="flex flex-col xl:flex-row gap-5">
             {/* Main Center Dashboard Column: ~885px */}
             <div className="flex-1 max-w-full xl:max-w-[885px] space-y-4">

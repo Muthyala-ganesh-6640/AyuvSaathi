@@ -34,6 +34,8 @@ export default function DoctorDashboardPage() {
   const [doctorUser, setDoctorUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [connections, setConnections] = useState<any[]>([]);
+  const [accessiblePatients, setAccessiblePatients] = useState<any[]>([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [patientData, setPatientData] = useState<any>(null);
 
@@ -74,10 +76,40 @@ export default function DoctorDashboardPage() {
       if (connData.ok) {
         setConnections(connData.connections || []);
       }
+
+      // Load all accessible patients in the healthcare ecosystem
+      setLoadingPatients(true);
+      const patientsRes = await fetch("/api/professional/patients");
+      const patientsData = await patientsRes.json();
+      if (patientsData.ok) {
+        setAccessiblePatients(patientsData.patients || []);
+      }
     } catch {
       toast.error("Failed to load doctor workspace.");
     } finally {
       setLoading(false);
+      setLoadingPatients(false);
+    }
+  };
+
+  const selectPatientById = async (patientId: string) => {
+    try {
+      setLoadingPatients(true);
+      const res = await fetch(`/api/professional/patients?patientId=${encodeURIComponent(patientId)}`);
+      const d = await res.json();
+      if (d.ok) {
+        setSelectedPatient(d.patient);
+        setPatientData(d);
+        setActiveTab("overview");
+        loadMessages(d.patient.id);
+        toast.success(`Connected to patient ${d.patient.name}`);
+      } else {
+        toast.error(d.error || "Failed to load patient records");
+      }
+    } catch {
+      toast.error("Error loading patient records");
+    } finally {
+      setLoadingPatients(false);
     }
   };
 
@@ -267,7 +299,14 @@ export default function DoctorDashboardPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/dashboard"
+                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5"
+              >
+                <span>View Patient Portal</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
               <button
                 type="button"
                 onClick={() => setActiveTab("prescribe")}
@@ -281,6 +320,16 @@ export default function DoctorDashboardPage() {
                 className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold cursor-pointer"
               >
                 Send Message
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedPatient(null);
+                  setPatientData(null);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold cursor-pointer"
+              >
+                Switch Patient
               </button>
             </div>
           </div>
@@ -320,22 +369,73 @@ export default function DoctorDashboardPage() {
         {activeTab === "overview" && (
           <div className="space-y-6">
             {!selectedPatient ? (
-              <div className="p-8 text-center rounded-2xl bg-white border border-slate-200 space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
-                  <QrCode className="w-6 h-6" />
+              <div className="space-y-6">
+                <div className="p-8 text-center rounded-2xl bg-white border border-slate-200 space-y-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+                    <QrCode className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-base font-bold text-[#17344F]">No Active Patient Selected</h3>
+                  <p className="text-xs text-slate-600 max-w-md mx-auto">
+                    Scan the patient's Universal Health QR code or select an authorized patient profile below to review shared clinical records, lab results, and medications.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsScannerOpen(true)}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-md cursor-pointer transition-transform hover:scale-105"
+                  >
+                    <QrCode className="w-4 h-4" />
+                    <span>Scan Patient QR Code</span>
+                  </button>
                 </div>
-                <h3 className="text-base font-bold text-[#17344F]">No Active Patient Selected</h3>
-                <p className="text-xs text-slate-600 max-w-md mx-auto">
-                  Scan the patient's Universal Health QR code to securely load authorized laboratory reports, active medications, and medical records.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setIsScannerOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-xs cursor-pointer"
-                >
-                  <QrCode className="w-4 h-4" />
-                  <span>Scan Patient QR Code</span>
-                </button>
+
+                {/* Patient Directory for quick clinical record review */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#17344F]">Authorized Patient Network Directory</h4>
+                      <p className="text-xs text-slate-500">Select any patient below to access their synchronized medical charts and lab analyses</p>
+                    </div>
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
+                      {accessiblePatients.length} Patients
+                    </span>
+                  </div>
+
+                  {loadingPatients ? (
+                    <div className="py-6 text-center text-xs text-slate-500">Loading authorized patient directory...</div>
+                  ) : accessiblePatients.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-slate-500">No patient profiles registered yet.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {accessiblePatients.map((p) => (
+                        <div
+                          key={p.id}
+                          className="p-4 rounded-xl border border-slate-200 hover:border-teal-400 bg-slate-50/60 hover:bg-white transition-all flex items-center justify-between gap-3 shadow-2xs"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-[#17344F]">{p.name}</span>
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 font-semibold">
+                                {p.ayuvSaathiId}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-3">
+                              <span>📄 {p.documentsCount || 0} Reports</span>
+                              <span>💊 {p.prescriptionsCount || 0} Prescriptions</span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => selectPatientById(p.id)}
+                            className="px-3 py-1.5 rounded-lg bg-[#17344F] hover:bg-teal-700 text-white text-xs font-semibold cursor-pointer transition-colors shadow-2xs"
+                          >
+                            Open Records →
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

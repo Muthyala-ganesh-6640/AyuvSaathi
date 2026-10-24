@@ -11,6 +11,11 @@ import {
   LogOut,
   Sparkles,
   Settings,
+  Menu,
+  X,
+  Stethoscope,
+  FlaskConical,
+  Pill,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -18,9 +23,11 @@ import { useState } from "react";
 interface NavbarProps {
   user?: { displayName?: string; email?: string } | null;
   onRefresh?: () => void;
+  onToggleMenu?: () => void;
+  isMenuOpen?: boolean;
 }
 
-export function Navbar({ user, onRefresh }: NavbarProps) {
+export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
@@ -81,8 +88,19 @@ export function Navbar({ user, onRefresh }: NavbarProps) {
 
   return (
     <header className="h-[72px] bg-white border-b border-[#E1EBF0] px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 shrink-0">
-      {/* Left: Brand block matching the 245px sidebar width */}
-      <div className="w-[235px] shrink-0 flex items-center">
+      {/* Left: Menu button + Brand block */}
+      <div className="flex items-center gap-2">
+        {onToggleMenu && (
+          <button
+            type="button"
+            onClick={onToggleMenu}
+            className="flex items-center gap-1.5 p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+            title={isMenuOpen ? "Hide Menu" : "Show Menu"}
+          >
+            {isMenuOpen ? <X className="w-5 h-5 text-teal-700" /> : <Menu className="w-5 h-5 text-teal-700" />}
+            <span className="text-xs font-bold hidden sm:inline">{isMenuOpen ? "Close" : "Menu"}</span>
+          </button>
+        )}
         <BrandLogo variant="header" href="/dashboard" />
       </div>
 
@@ -103,8 +121,43 @@ export function Navbar({ user, onRefresh }: NavbarProps) {
         </form>
       </div>
 
-      {/* Right: Quick actions, Notifications, Language, Profile */}
+      {/* Right: Portal Switcher, Quick actions, Notifications, Language, Profile */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Healthcare Ecosystem Portal Switcher */}
+        <div className="hidden lg:flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+          <Link
+            href="/dashboard"
+            className={`px-2.5 py-1 rounded-lg transition-colors ${
+              pathname.includes("/dashboard") ? "bg-white text-teal-800 shadow-xs" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Patient
+          </Link>
+          <Link
+            href="/doctor"
+            className={`px-2.5 py-1 rounded-lg transition-colors ${
+              pathname.includes("/doctor") ? "bg-white text-blue-800 shadow-xs" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Doctor
+          </Link>
+          <Link
+            href="/lab"
+            className={`px-2.5 py-1 rounded-lg transition-colors ${
+              pathname.includes("/lab") ? "bg-white text-purple-800 shadow-xs" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Lab
+          </Link>
+          <Link
+            href="/pharmacy"
+            className={`px-2.5 py-1 rounded-lg transition-colors ${
+              pathname.includes("/pharmacy") ? "bg-white text-amber-800 shadow-xs" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Pharmacy
+          </Link>
+        </div>
         {user && (
           <button
             type="button"

@@ -17,7 +17,11 @@ import {
   Building2,
 } from "lucide-react";
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const t = useTranslations("nav");
   const pathname = usePathname();
 
@@ -36,7 +40,19 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-[245px] shrink-0 bg-white border-r border-[#E1EBF0] flex flex-col justify-between p-4 sticky top-[72px] h-[calc(100vh-72px)] overflow-y-auto z-20">
+    <aside className="w-[260px] shrink-0 bg-white border-r border-[#E1EBF0] flex flex-col justify-between p-4 h-[calc(100vh-72px)] overflow-y-auto z-20 shadow-lg">
+      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+        <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Menu</span>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 text-xs rounded-lg hover:bg-slate-100 text-slate-500 font-bold cursor-pointer"
+          >
+            ✕ Close
+          </button>
+        )}
+      </div>
       <nav className="space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -47,6 +63,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => onClose && onClose()}
               className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
                 isActive
                   ? "bg-[#DDF5F0] text-[#087F8C] font-bold shadow-xs"

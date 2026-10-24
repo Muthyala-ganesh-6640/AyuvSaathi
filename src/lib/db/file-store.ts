@@ -267,6 +267,7 @@ export const store = {
   getProfileByEmail: (email: string) =>
     query((db) => db.profiles.find((p) => p.email.toLowerCase() === email.toLowerCase()) ?? null),
   getProfile: (id: string) => query((db) => db.profiles.find((p) => p.id === id) ?? null),
+  listProfiles: () => query((db) => db.profiles),
   upsertProfile: (profile: Profile) =>
     mutate((db) => {
       const i = db.profiles.findIndex((p) => p.id === profile.id);
