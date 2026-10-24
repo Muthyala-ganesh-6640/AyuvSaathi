@@ -46,8 +46,8 @@ export function AppShell({ children, showSidebar = true }: AppShellProps) {
         onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
       />
       <div className="flex-1 flex w-full relative">
-        {/* Collapsible Menu Drawer: Hidden by default, shown when Menu button is pressed */}
-        {showSidebar && isMenuOpen && (
+        {/* Collapsible Menu Drawer: Only shown when logged in and Menu button is toggled */}
+        {user && showSidebar && isMenuOpen && (
           <>
             <div
               className="fixed inset-0 top-[72px] bg-slate-900/40 backdrop-blur-2xs z-30 transition-opacity"

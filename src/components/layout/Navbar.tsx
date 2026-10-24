@@ -99,7 +99,7 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
     <header className="h-[72px] bg-white border-b border-[#E1EBF0] px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 shrink-0">
       {/* Left: Menu button + Brand block */}
       <div className="flex items-center gap-2">
-        {onToggleMenu && (
+        {user && onToggleMenu && (
           <button
             type="button"
             onClick={onToggleMenu}
@@ -132,8 +132,9 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
 
       {/* Right: Portal Switcher, Quick actions, Notifications, Language, Profile */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        {/* Healthcare Ecosystem Portal Switcher */}
-        <div className="hidden lg:flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+        {/* Healthcare Ecosystem Portal Switcher (only shown after login) */}
+        {user && (
+          <div className="hidden lg:flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
           <Link
             href="/dashboard"
             className={`px-2.5 py-1 rounded-lg transition-colors ${
@@ -167,6 +168,7 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
             Pharmacy
           </Link>
         </div>
+        )}
         {user && (
           <button
             type="button"
@@ -180,15 +182,17 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
           </button>
         )}
 
-        {/* Notification Bell */}
-        <button
-          type="button"
-          className="relative p-2 text-[#61768A] hover:text-[#17344F] hover:bg-[#F7FAFC] rounded-xl transition-colors cursor-pointer"
+        {/* Notification Bell (only shown after login) */}
+        {user && (
+          <button
+            type="button"
+            className="relative p-2 text-[#61768A] hover:text-[#17344F] hover:bg-[#F7FAFC] rounded-xl transition-colors cursor-pointer"
           title={h("notifications")}
         >
           <Bell className="w-4 h-4" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#D94B55] ring-2 ring-white" />
         </button>
+        )}
 
         {/* Language Selector Dropdown */}
         <div className="relative">
