@@ -385,6 +385,8 @@ export interface AuditLogEntry {
   action:
     | "qr_scanned"
     | "connection_created"
+    | "connection_revoked"
+    | "connection_updated"
     | "report_uploaded"
     | "prescription_created"
     | "bill_generated"

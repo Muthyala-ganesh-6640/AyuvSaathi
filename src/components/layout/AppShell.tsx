@@ -12,7 +12,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, showSidebar = true }: AppShellProps) {
-  const [user, setUser] = useState<{ displayName?: string; email?: string } | null>(null);
+  const [user, setUser] = useState<{ displayName?: string; email?: string; role?: string } | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const fetchUser = async () => {

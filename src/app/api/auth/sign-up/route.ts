@@ -5,6 +5,7 @@ import { hashPassword, passwordIssues } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { jsonError, limitOrThrow } from "@/lib/api";
 import { clientIp, nowIso } from "@/lib/utils";
+import { getDashboardForRole } from "@/lib/auth/roles";
 import type { Locale, UserRole } from "@/lib/db/types";
 
 const schema = z.object({
@@ -86,10 +87,14 @@ export async function POST(request: NextRequest) {
     updatedAt: created,
   });
   const { cookieHeader } = await createSession(profile);
+  const locale = profile.interfaceLanguage || "en";
+  const targetDashboard = getDashboardForRole(role, locale);
+
   const response = Response.json({
     ok: true,
     language: profile.interfaceLanguage,
     role: profile.role || "patient",
+    targetDashboard,
   });
   if (cookieHeader) {
     response.headers.set("set-cookie", cookieHeader);

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { store } from "@/lib/db/file-store";
 import { jsonError } from "@/lib/api";
+import { canAccessPatientData } from "@/lib/auth/authorization";
 import type { PharmacyBill, TimelineEvent, AppNotification, AuditLogEntry } from "@/lib/db/types";
 
 const billSchema = z.object({
@@ -34,6 +35,10 @@ export async function GET(request: NextRequest) {
 
     if (user.role === "pharmacist") {
       if (patientProfileId) {
+        const check = await canAccessPatientData(user, patientProfileId);
+        if (!check.authorized) {
+          return jsonError("Unauthorized to view this patient's bills", 403);
+        }
         const list = await store.listPharmacyBills(patientProfileId);
         return Response.json({ ok: true, bills: list });
       }
@@ -43,6 +48,10 @@ export async function GET(request: NextRequest) {
 
     // Patient
     const targetId = patientProfileId || user.id;
+    const check = await canAccessPatientData(user, targetId);
+    if (!check.authorized) {
+      return jsonError("Unauthorized to view bills", 403);
+    }
     const list = await store.listPharmacyBills(targetId);
     return Response.json({ ok: true, bills: list });
   } catch {
@@ -62,6 +71,12 @@ export async function POST(request: NextRequest) {
     const parsed = billSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError("Invalid bill details. Items, subtotal, and total amount are required.", 400);
+    }
+
+    // Verify authorized collaboration to dispense medicines
+    const check = await canAccessPatientData(user, parsed.data.patientProfileId, "dispenseMedicines");
+    if (!check.authorized) {
+      return jsonError(check.reason || "Unauthorized: No active collaboration grant to dispense for this patient", 403);
     }
 
     const now = new Date().toISOString();

@@ -61,6 +61,11 @@ export default function PharmacistDashboardPage() {
         window.location.href = `/${currentLocale}/auth/professional?role=pharmacist`;
         return;
       }
+      if (data.user.role !== "pharmacist") {
+        toast.error("Access denied: You must be signed in as a Pharmacist.");
+        window.location.href = `/${currentLocale}/dashboard`;
+        return;
+      }
       setPharmUser(data.user);
 
       // Fetch accessible patients directory
@@ -294,13 +299,13 @@ export default function PharmacistDashboardPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Link
-                href="/dashboard"
-                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5"
+              <button
+                type="button"
+                onClick={() => setActiveTab("prescriptions")}
+                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <span>Patient Portal</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+                <span>Active Prescriptions</span>
+              </button>
               <button
                 type="button"
                 onClick={() => {

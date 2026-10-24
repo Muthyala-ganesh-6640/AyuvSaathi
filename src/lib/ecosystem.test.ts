@@ -1,25 +1,21 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { NextRequest } from "next/server";
 import { store } from "@/lib/db/file-store";
 import { createSession } from "@/lib/auth/session";
-import { POST as signUpPost } from "@/app/api/auth/sign-up/route";
 import { GET as qrTokenGet } from "@/app/api/qr/token/route";
 import { POST as qrResolvePost } from "@/app/api/qr/resolve/route";
-import { GET as familyGet, POST as familyPost } from "@/app/api/family/route";
-import { POST as prescriptionPost, GET as prescriptionGet } from "@/app/api/prescriptions/route";
-import { POST as billPost, GET as billGet } from "@/app/api/pharmacy/bills/route";
+import { POST as familyPost } from "@/app/api/family/route";
+import { POST as prescriptionPost } from "@/app/api/prescriptions/route";
+import { POST as billPost } from "@/app/api/pharmacy/bills/route";
 import { GET as dashboardGet } from "@/app/api/dashboard/route";
 
 describe("AyuvSaathi Healthcare Ecosystem Integration", () => {
   let patientUser: any;
-  let doctorUser: any;
-  let pharmacistUser: any;
-  let labTechUser: any;
   let patientSession: string;
   let doctorSession: string;
   let pharmacistSession: string;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     // Setup patient
     const patientProfile = await store.upsertProfile({
       id: crypto.randomUUID(),
@@ -66,7 +62,6 @@ describe("AyuvSaathi Healthcare Ecosystem Integration", () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
-    doctorUser = docProfile;
     doctorSession = (await createSession(docProfile)).token;
 
     // Setup pharmacist
@@ -94,7 +89,6 @@ describe("AyuvSaathi Healthcare Ecosystem Integration", () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
-    pharmacistUser = pharmProfile;
     pharmacistSession = (await createSession(pharmProfile)).token;
   });
 

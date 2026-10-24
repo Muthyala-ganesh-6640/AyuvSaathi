@@ -68,6 +68,11 @@ export default function DoctorDashboardPage() {
         window.location.href = `/${currentLocale}/auth/professional?role=doctor`;
         return;
       }
+      if (data.user.role !== "doctor") {
+        toast.error("Access denied: You must be signed in as a Doctor.");
+        window.location.href = `/${currentLocale}/dashboard`;
+        return;
+      }
       setDoctorUser(data.user);
 
       // Fetch doctor's connected patients
@@ -300,13 +305,13 @@ export default function DoctorDashboardPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href="/dashboard"
-                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5"
+              <button
+                type="button"
+                onClick={() => setActiveTab("overview")}
+                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <span>View Patient Portal</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+                <span>Authorized Charts</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("prescribe")}

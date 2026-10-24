@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
 import { store } from "@/lib/db/file-store";
-import { withUser } from "@/lib/api";
+import { jsonError, withUser } from "@/lib/api";
 import { publicProfile } from "@/lib/auth/session";
 import { ensureUpcomingDoses } from "@/lib/medical/ensure-doses";
 import { localDateKey } from "@/lib/medical/schedules";
 import { serviceStatus } from "@/lib/env";
+import { canAccessPatientData } from "@/lib/auth/authorization";
 
 export async function GET(request: NextRequest) {
   const auth = await withUser(request);
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
   const today = localDateKey(new Date(), tz);
   const requestedProfileId = request.nextUrl.searchParams.get("patientProfileId") || request.headers.get("x-patient-profile-id") || user.id;
 
-  // Verify family member access if requested profile is not the primary user
+  // Verify access if requested profile is not the primary user
   let activeProfileName = user.displayName;
   let activeAyuvSaathiId = user.ayuvSaathiId || `AS-P-${user.id.slice(0, 5).toUpperCase()}`;
   let activeRelationship = "self";
@@ -26,6 +27,17 @@ export async function GET(request: NextRequest) {
       activeProfileName = fam.name;
       activeAyuvSaathiId = fam.ayuvSaathiId;
       activeRelationship = fam.relationship;
+    } else {
+      // Must be an authorized professional with an active collaboration connection
+      const authCheck = await canAccessPatientData(user, requestedProfileId, "viewRecords");
+      if (!authCheck.authorized) {
+        return jsonError("Unauthorized to access this patient profile", 403);
+      }
+      const targetProfile = await store.getProfile(requestedProfileId);
+      if (targetProfile) {
+        activeProfileName = targetProfile.displayName;
+        activeAyuvSaathiId = targetProfile.ayuvSaathiId || `AS-P-${targetProfile.id.slice(0, 5).toUpperCase()}`;
+      }
     }
   }
 

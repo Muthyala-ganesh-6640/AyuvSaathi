@@ -14,11 +14,17 @@ import type { ExtractionPayload } from "@/lib/ai/schemas";
 import type { DocumentCategory } from "@/lib/db/types";
 import { routing } from "@/i18n/routing";
 import { buildReportAnalysis } from "@/lib/medical/report-summary";
+import { canAccessPatientData } from "@/lib/auth/authorization";
 
 export async function GET(request: NextRequest) {
   const auth = await withUser(request);
   if ("response" in auth) return auth.response;
-  const documents = await store.listDocuments(auth.user.id);
+  const requestedProfileId = request.nextUrl.searchParams.get("patientProfileId") || auth.user.id;
+  const authCheck = await canAccessPatientData(auth.user, requestedProfileId, "viewRecords");
+  if (!authCheck.authorized) {
+    return jsonError("Unauthorized to view documents for this profile", 403);
+  }
+  const documents = await store.listDocuments(requestedProfileId);
   const extractions = await Promise.all(
     documents
       .filter((document) => document.category === "prescription")
@@ -69,9 +75,19 @@ export async function POST(request: NextRequest) {
     "other",
   ];
   const cat = allowedCategory.includes(category) ? category : "other";
+  const rawOwnerId = form.get("ownerId");
+  let targetOwnerId = auth.user.id;
+  if (rawOwnerId && typeof rawOwnerId === "string" && rawOwnerId !== auth.user.id) {
+    const authCheck = await canAccessPatientData(auth.user, rawOwnerId, "uploadReports");
+    if (!authCheck.authorized) {
+      return jsonError(authCheck.reason || "Unauthorized to upload reports for this patient", 403);
+    }
+    targetOwnerId = rawOwnerId;
+  }
+
   const id = crypto.randomUUID();
   const ext = kind === "pdf" ? ".pdf" : kind === "png" ? ".png" : ".jpg";
-  const storagePath = await saveUpload(auth.user.id, id, buffer, ext);
+  const storagePath = await saveUpload(targetOwnerId, id, buffer, ext);
   const created = nowIso();
   let processingStatus: "pending" | "extracted" | "needs_review" | "manual" | "unconfigured" | "failed" =
     "pending";

@@ -293,6 +293,8 @@ export const store = {
     ),
   getDocument: (id: string, ownerId: string) =>
     query((db) => db.documents.find((d) => d.id === id && d.ownerId === ownerId) ?? null),
+  getDocumentById: (id: string) =>
+    query((db) => db.documents.find((d) => d.id === id) ?? null),
   saveDocument: (doc: MedicalDocument) =>
     mutate((db) => {
       const i = db.documents.findIndex((d) => d.id === doc.id);

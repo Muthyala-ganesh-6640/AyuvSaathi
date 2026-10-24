@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { store } from "@/lib/db/file-store";
 import { jsonError } from "@/lib/api";
+import { canAccessPatientData } from "@/lib/auth/authorization";
 import type { DoctorPrescription, Medication, TimelineEvent, AppNotification, AuditLogEntry } from "@/lib/db/types";
 
 const prescriptionSchema = z.object({
@@ -28,6 +29,10 @@ export async function GET(request: NextRequest) {
 
     if (user.role === "doctor") {
       if (patientProfileId) {
+        const check = await canAccessPatientData(user, patientProfileId, "viewPrescriptions");
+        if (!check.authorized) {
+          return jsonError("Unauthorized to view this patient's prescriptions", 403);
+        }
         const list = await store.listPrescriptions(patientProfileId);
         return Response.json({ ok: true, prescriptions: list });
       }
@@ -37,6 +42,10 @@ export async function GET(request: NextRequest) {
 
     // Patient or Pharmacist
     const targetId = patientProfileId || user.id;
+    const check = await canAccessPatientData(user, targetId, "viewPrescriptions");
+    if (!check.authorized) {
+      return jsonError("Unauthorized to view prescriptions", 403);
+    }
     const list = await store.listPrescriptions(targetId);
     return Response.json({ ok: true, prescriptions: list });
   } catch {
@@ -56,6 +65,12 @@ export async function POST(request: NextRequest) {
     const parsed = prescriptionSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError("Invalid prescription details. At least one medicine item is required.", 400);
+    }
+
+    // Enforce explicit collaboration check
+    const check = await canAccessPatientData(user, parsed.data.patientProfileId, "createPrescription");
+    if (!check.authorized) {
+      return jsonError(check.reason || "Unauthorized: No active collaboration grant to prescribe for this patient", 403);
     }
 
     const now = new Date().toISOString();

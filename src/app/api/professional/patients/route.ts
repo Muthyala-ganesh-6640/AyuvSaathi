@@ -2,6 +2,11 @@ import { NextRequest } from "next/server";
 import { requireUser } from "@/lib/auth/session";
 import { store } from "@/lib/db/file-store";
 import { jsonError } from "@/lib/api";
+import {
+  canAccessPatientData,
+  getAuthorizedPatientsForProfessional,
+  type RequiredPermission,
+} from "@/lib/auth/authorization";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,20 +15,38 @@ export async function GET(request: NextRequest) {
       return jsonError("Unauthorized", 401);
     }
 
+    // Role check: Only professional roles can query this endpoint
+    if (!user.role || user.role === "patient") {
+      return jsonError("Access denied: Healthcare professionals only", 403);
+    }
+
     const { searchParams } = new URL(request.url);
     const patientId = searchParams.get("patientId");
 
     // Case 1: Fetch single patient's detailed shared healthcare record
     if (patientId) {
-      let patientInfo: {
-        id: string;
-        name: string;
-        email?: string;
-        ayuvSaathiId: string;
-        relationship: string;
-        emergencyContact?: string;
-        bloodGroup?: string;
-      } | null = null;
+      const requiredPermission: RequiredPermission =
+        user.role === "doctor"
+          ? "viewRecords"
+          : user.role === "pharmacist"
+          ? "viewPrescriptions"
+          : "viewRecords";
+
+      const check = await canAccessPatientData(user, patientId, requiredPermission);
+      if (!check.authorized) {
+        return jsonError(check.reason || "Unauthorized to access this patient's medical records", 403);
+      }
+
+      // Resolve patient identity
+      let patientInfo = {
+        id: patientId,
+        name: "Authorized Patient",
+        ayuvSaathiId: `AYUV-${patientId.slice(0, 6).toUpperCase()}`,
+        relationship: "self",
+        emergencyContact: undefined as string | undefined,
+        bloodGroup: undefined as string | undefined,
+        email: undefined as string | undefined,
+      };
 
       const profile = await store.getProfile(patientId);
       if (profile) {
@@ -33,6 +56,8 @@ export async function GET(request: NextRequest) {
           email: profile.email,
           ayuvSaathiId: profile.ayuvSaathiId || `AYUV-${profile.id.slice(0, 6).toUpperCase()}`,
           relationship: "self",
+          emergencyContact: undefined,
+          bloodGroup: undefined,
         };
       } else {
         const fam = await store.getFamilyMember(patientId);
@@ -44,86 +69,89 @@ export async function GET(request: NextRequest) {
             relationship: fam.relationship,
             emergencyContact: fam.emergencyContact,
             bloodGroup: fam.bloodGroup,
+            email: undefined,
           };
         }
       }
 
-      if (!patientInfo) {
-        // Fallback: create placeholder identity if patientId exists in docs
-        patientInfo = {
-          id: patientId,
-          name: "Authorized Patient",
-          ayuvSaathiId: `AYUV-${patientId.slice(0, 6).toUpperCase()}`,
-          relationship: "self",
-        };
+      // Enforce strict role-based data projection
+      if (user.role === "doctor") {
+        const [allDocs, obs, meds, prescriptions, timeline] = await Promise.all([
+          store.listDocuments(patientId).catch(() => []),
+          store.listObservations(patientId).catch(() => []),
+          store.listMedications(patientId).catch(() => []),
+          store.listPrescriptions(patientId).catch(() => []),
+          store.listTimeline(patientId).catch(() => []),
+        ]);
+
+        const labReports = allDocs.filter(
+          (d) => d.category === "lab_report" || d.category === "diagnostic_report",
+        );
+        const doctorSummaries = allDocs.filter(
+          (d) => d.category === "doctor_visit" || d.category === "discharge_summary",
+        );
+
+        return Response.json({
+          ok: true,
+          patient: patientInfo,
+          documents: allDocs,
+          labReports,
+          doctorSummaries,
+          observations: obs,
+          medications: meds,
+          prescriptions,
+          timeline,
+          connection: check.connection,
+        });
       }
 
-      // Fetch all medical data in parallel
-      const [allDocs, obs, meds, prescriptions, timeline, bills] = await Promise.all([
-        store.listDocuments(patientId).catch(() => []),
-        store.listObservations(patientId).catch(() => []),
-        store.listMedications(patientId).catch(() => []),
-        store.listPrescriptions(patientId).catch(() => []),
-        store.listTimeline(patientId).catch(() => []),
-        store.listPharmacyBills(patientId).catch(() => []),
-      ]);
+      if (user.role === "lab_tech") {
+        // Lab technicians receive diagnostic test history & biomarkers only
+        const [allDocs, obs] = await Promise.all([
+          store.listDocuments(patientId).catch(() => []),
+          store.listObservations(patientId).catch(() => []),
+        ]);
+        const labReports = allDocs.filter(
+          (d) => d.category === "lab_report" || d.category === "diagnostic_report",
+        );
 
-      const labReports = allDocs.filter((d) => d.category === "lab_report");
-      const doctorSummaries = allDocs.filter((d) => d.category === "doctor_visit" || d.category === "discharge_summary");
+        return Response.json({
+          ok: true,
+          patient: patientInfo,
+          labReports,
+          observations: obs,
+          connection: check.connection,
+        });
+      }
 
-      return Response.json({
-        ok: true,
-        patient: patientInfo,
-        documents: allDocs,
-        labReports,
-        doctorSummaries,
-        observations: obs,
-        medications: meds,
-        prescriptions,
-        timeline,
-        bills,
-      });
+      if (user.role === "pharmacist") {
+        // Pharmacists receive ONLY prescriptions, active meds, and past pharmacy bills
+        const [prescriptions, meds, bills] = await Promise.all([
+          store.listPrescriptions(patientId).catch(() => []),
+          store.listMedications(patientId).catch(() => []),
+          store.listPharmacyBills(patientId).catch(() => []),
+        ]);
+
+        return Response.json({
+          ok: true,
+          patient: patientInfo,
+          prescriptions,
+          medications: meds.filter((m) => m.status === "active"),
+          bills,
+          connection: check.connection,
+        });
+      }
+
+      return jsonError("Unsupported professional role", 403);
     }
 
-    // Case 2: List all accessible patient profiles
-    const profiles = await store.listProfiles();
-    const patientProfiles = profiles.filter((p) => !p.role || p.role === "patient");
-
-    const patientsList = await Promise.all(
-      patientProfiles.map(async (p) => {
-        const [docs, prescriptions] = await Promise.all([
-          store.listDocuments(p.id).catch(() => []),
-          store.listPrescriptions(p.id).catch(() => []),
-        ]);
-        const labReports = docs.filter((d) => d.category === "lab_report");
-
-        // Also fetch family members under this patient
-        const family = await store.listFamilyMembers(p.id).catch(() => []);
-
-        return {
-          id: p.id,
-          name: p.displayName || p.email.split("@")[0],
-          email: p.email,
-          ayuvSaathiId: p.ayuvSaathiId || `AYUV-${p.id.slice(0, 6).toUpperCase()}`,
-          relationship: "self",
-          documentsCount: docs.length,
-          labReportsCount: labReports.length,
-          prescriptionsCount: prescriptions.length,
-          familyMembersCount: family.length,
-          lastUpdated: docs[0]?.createdAt || p.updatedAt || p.createdAt,
-          familyMembers: family.map((f) => ({
-            id: f.id,
-            name: f.name,
-            ayuvSaathiId: f.ayuvSaathiId,
-            relationship: f.relationship,
-          })),
-        };
-      }),
-    );
+    // Case 2: List patients EXPLICITLY authorized for this professional
+    // CRITICAL: Do NOT list all patients in the system. Only patients with active connections.
+    const authorizedPatients = await getAuthorizedPatientsForProfessional(user);
 
     return Response.json({
       ok: true,
-      patients: patientsList,
+      patients: authorizedPatients,
     });
   } catch (error) {
     console.error("Failed to list professional patients:", error);

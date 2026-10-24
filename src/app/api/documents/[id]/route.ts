@@ -5,6 +5,7 @@ import { jsonError, withUser } from "@/lib/api";
 import { nowIso } from "@/lib/utils";
 import type { DocumentCategory } from "@/lib/db/types";
 import { buildReportAnalysis } from "@/lib/medical/report-summary";
+import { canAccessPatientData } from "@/lib/auth/authorization";
 
 const patchDocSchema = z.object({
   displayName: z.string().min(1).max(200).optional(),
@@ -26,11 +27,19 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const auth = await withUser(request);
   if ("response" in auth) return auth.response;
   const { id } = await context.params;
-  const document = await store.getDocument(id, auth.user.id);
+
+  const document = await store.getDocumentById(id);
   if (!document) return jsonError("Document not found.", 404);
+
+  // Enforce server-side authorization: owner or active healthcare connection
+  const check = await canAccessPatientData(auth.user, document.ownerId, "viewRecords");
+  if (!check.authorized) {
+    return jsonError("Document not found.", 404);
+  }
+
   const [observations, extractions] = await Promise.all([
-    store.listObservations(auth.user.id, id),
-    store.listExtractions(id, auth.user.id),
+    store.listObservations(document.ownerId, id),
+    store.listExtractions(id, document.ownerId),
   ]);
   const latestExtraction = extractions.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] || null;
   const analysis = buildReportAnalysis(document, observations, latestExtraction, auth.user.interfaceLanguage);
@@ -63,7 +72,8 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
   const auth = await withUser(request);
   if ("response" in auth) return auth.response;
   const { id } = await context.params;
-  const ok = await store.deleteDocument(id, auth.user.id);
-  if (!ok) return jsonError("Document not found.", 404);
-  return Response.json({ ok: true });
+
+  const deleted = await store.deleteDocument(id, auth.user.id);
+  if (!deleted) return jsonError("Document not found.", 404);
+  return Response.json({ ok: true, deletedId: id });
 }

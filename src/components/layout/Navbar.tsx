@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 
 interface NavbarProps {
-  user?: { displayName?: string; email?: string } | null;
+  user?: { displayName?: string; email?: string; role?: string } | null;
   onRefresh?: () => void;
   onToggleMenu?: () => void;
   isMenuOpen?: boolean;
@@ -38,6 +38,15 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
   const [seeding, setSeeding] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+
+  const homeHref =
+    user?.role === "doctor"
+      ? "/doctor"
+      : user?.role === "lab_tech"
+      ? "/lab"
+      : user?.role === "pharmacist"
+      ? "/pharmacy"
+      : "/dashboard";
 
   const handleSignOut = async () => {
     try {
@@ -101,7 +110,7 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
             <span className="text-xs font-bold hidden sm:inline">{isMenuOpen ? "Close" : "Menu"}</span>
           </button>
         )}
-        <BrandLogo variant="header" href="/dashboard" />
+        <BrandLogo variant="header" href={homeHref} />
       </div>
 
       {/* Center: Search input */}

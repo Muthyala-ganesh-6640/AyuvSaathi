@@ -52,6 +52,11 @@ export default function LabTechnicianDashboardPage() {
         window.location.href = `/${currentLocale}/auth/professional?role=lab_tech`;
         return;
       }
+      if (data.user.role !== "lab_tech") {
+        toast.error("Access denied: You must be signed in as a Lab Technician.");
+        window.location.href = `/${currentLocale}/dashboard`;
+        return;
+      }
       setLabUser(data.user);
 
       // Fetch accessible patients directory
@@ -129,7 +134,7 @@ export default function LabTechnicianDashboardPage() {
       formData.append("ownerId", selectedPatient.id); // Associated with scanned patient profile
 
       // Upload using existing AyuvSaathi document processing route
-      const res = await fetch("/api/documents/upload", {
+      const res = await fetch("/api/documents", {
         method: "POST",
         body: formData,
       });
@@ -220,13 +225,13 @@ export default function LabTechnicianDashboardPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Link
-                href="/dashboard"
-                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5"
+              <button
+                type="button"
+                onClick={() => setActiveTab("reports")}
+                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <span>Patient Portal</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+                <span>Diagnostic History</span>
+              </button>
               <button
                 type="button"
                 onClick={() => {

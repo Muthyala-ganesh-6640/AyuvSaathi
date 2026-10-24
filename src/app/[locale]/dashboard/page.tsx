@@ -269,6 +269,12 @@ export default function DashboardPage() {
       }
       if (res.ok) {
         const json = await res.json();
+        // Server-verified authoritative role guard: redirect professionals to their dedicated workspace
+        if (json.user?.role && json.user.role !== "patient") {
+          const target = json.user.role === "doctor" ? "/doctor" : json.user.role === "lab_tech" ? "/lab" : "/pharmacy";
+          window.location.href = `/${locale}${target}`;
+          return;
+        }
         setData(json);
         if (json.activeProfile && !activeProfileId) {
           setActiveProfileId(json.activeProfile.id);
@@ -313,6 +319,45 @@ export default function DashboardPage() {
       toast.error("Network error sending alert.");
     } finally {
       setSendingEmergency(false);
+    }
+  };
+
+  const handleSwitchDomain = async (targetRole: "patient" | "doctor" | "lab_tech" | "pharmacist") => {
+    try {
+      const res = await fetch("/api/auth/switch-role", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ targetRole }),
+      });
+      const d = await res.json();
+      if (res.ok && d.redirectUrl) {
+        toast.success(`Switching domain to ${targetRole}...`);
+        window.location.href = d.redirectUrl;
+      } else {
+        toast.error(d.error || `Please register your ${targetRole} profile to access this portal.`);
+        router.push("/auth/role-select");
+      }
+    } catch {
+      toast.error("Error switching domain");
+    }
+  };
+
+  const handleRevokeConnection = async (connId: string) => {
+    try {
+      const res = await fetch("/api/connections", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: connId, status: "revoked" }),
+      });
+      const d = await res.json();
+      if (d.ok) {
+        toast.success("Doctor collaboration access revoked");
+        fetchDashboard(activeProfileId);
+      } else {
+        toast.error(d.error || "Failed to revoke access");
+      }
+    } catch {
+      toast.error("Network error revoking access");
     }
   };
 
@@ -680,30 +725,39 @@ export default function DashboardPage() {
                     Care Team Dashboards
                   </p>
                   <div className="space-y-1">
-                    <Link
-                      href="/doctor"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-800 hover:bg-blue-50 transition-colors"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleSwitchDomain("doctor");
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-blue-800 hover:bg-blue-50 transition-colors text-left cursor-pointer"
                     >
                       <Stethoscope className="w-4 h-4 text-blue-600" />
                       <span>Doctor Workspace</span>
-                    </Link>
-                    <Link
-                      href="/lab"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-teal-800 hover:bg-teal-50 transition-colors"
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleSwitchDomain("lab_tech");
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-teal-800 hover:bg-teal-50 transition-colors text-left cursor-pointer"
                     >
                       <FlaskConical className="w-4 h-4 text-teal-600" />
                       <span>Laboratory Portal</span>
-                    </Link>
-                    <Link
-                      href="/pharmacy"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50 transition-colors"
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleSwitchDomain("pharmacist");
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-50 transition-colors text-left cursor-pointer"
                     >
                       <Pill className="w-4 h-4 text-amber-600" />
                       <span>Pharmacy Portal</span>
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -744,27 +798,30 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <Link
-                href="/doctor"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 border border-blue-400/40 text-blue-200 hover:text-white text-xs font-bold transition-all shadow-xs"
+              <button
+                type="button"
+                onClick={() => handleSwitchDomain("doctor")}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 border border-blue-400/40 text-blue-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
               >
                 <Stethoscope className="w-3.5 h-3.5 text-blue-300" />
                 <span>Doctor Portal</span>
-              </Link>
-              <Link
-                href="/lab"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-600/30 hover:bg-teal-600/50 border border-teal-400/40 text-teal-200 hover:text-white text-xs font-bold transition-all shadow-xs"
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchDomain("lab_tech")}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-teal-600/30 hover:bg-teal-600/50 border border-teal-400/40 text-teal-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
               >
                 <FlaskConical className="w-3.5 h-3.5 text-teal-300" />
                 <span>Diagnostic Lab</span>
-              </Link>
-              <Link
-                href="/pharmacy"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-600/30 hover:bg-amber-600/50 border border-amber-400/40 text-amber-200 hover:text-white text-xs font-bold transition-all shadow-xs"
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchDomain("pharmacist")}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-600/30 hover:bg-amber-600/50 border border-amber-400/40 text-amber-200 hover:text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
               >
                 <Pill className="w-3.5 h-3.5 text-amber-300" />
                 <span>Pharmacy Portal</span>
-              </Link>
+              </button>
             </div>
           </div>
           <div className="flex flex-col xl:flex-row gap-5">
@@ -1143,6 +1200,14 @@ export default function DashboardPage() {
                               className="flex-1 py-1 px-2.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-[11px] font-bold text-red-700 text-center transition-colors cursor-pointer"
                             >
                               Emergency Alert
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRevokeConnection(doc.id)}
+                              className="py-1 px-2 rounded-lg bg-slate-100 hover:bg-red-50 text-[10px] font-semibold text-slate-500 hover:text-red-700 transition-colors cursor-pointer"
+                              title="Revoke doctor collaboration access"
+                            >
+                              Revoke
                             </button>
                           </div>
                         </div>

@@ -30,7 +30,9 @@ export default function SignInPage() {
       } else {
         toast.success("Welcome back! Redirecting...");
         const targetLocale = data.language || currentLocale || "en";
-        if (data.role === "doctor") {
+        if (data.targetDashboard) {
+          window.location.href = data.targetDashboard;
+        } else if (data.role === "doctor") {
           window.location.href = `/${targetLocale}/doctor`;
         } else if (data.role === "lab_tech") {
           window.location.href = `/${targetLocale}/lab`;
