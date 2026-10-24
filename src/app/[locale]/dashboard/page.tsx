@@ -723,14 +723,20 @@ export default function DashboardPage() {
             />
             <aside className="fixed top-[72px] left-0 bottom-0 z-40 w-[280px] bg-white border-r border-[#D4E1EE] flex flex-col justify-between py-5 px-3 shadow-2xl animate-in slide-in-from-left duration-200 overflow-y-auto">
               <div className="space-y-4">
-                <div className="flex items-center justify-between px-3 pb-2 border-b border-[#D4E1EE]">
-                  <span className="text-xs font-bold text-[#465978] uppercase tracking-wider">Navigation Menu</span>
+                <div className="flex items-center justify-between px-1 pb-3 border-b border-[#D4E1EE]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-[#08193C] text-[#DDB549] flex items-center justify-center shadow-2xs">
+                      <LayoutDashboard className="w-3.5 h-3.5 text-[#DDB549]" />
+                    </div>
+                    <span className="text-xs font-bold text-[#08193C] uppercase tracking-wider">Navigation Menu</span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setIsMenuOpen(false)}
-                    className="p-1 rounded-lg hover:bg-[#EDF3F7] text-[#08193C] cursor-pointer"
+                    className="p-1.5 rounded-lg hover:bg-[#EDF3F7] text-[#465978] hover:text-[#08193C] transition-colors cursor-pointer"
+                    title="Close Menu"
                   >
-                    <X className="w-4 h-4 text-[#08193C]" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -742,25 +748,26 @@ export default function DashboardPage() {
                         key={item.href}
                         href={item.href}
                         onClick={() => setIsMenuOpen(false)}
-                        className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
+                        className={`relative flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all group overflow-hidden ${
                           item.active
-                            ? "bg-[#EDF3F7] text-[#08193C] border-l-4 border-[#DDB549]"
+                            ? "bg-[#EDF3F7] text-[#08193C] font-bold shadow-2xs"
                             : "text-[#465978] hover:bg-[#EDF3F7] hover:text-[#08193C]"
                         }`}
                       >
+                        {item.active && (
+                          <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-[#DDB549]" />
+                        )}
                         <div className="flex items-center gap-3">
                           <Icon
-                            className={`w-4 h-4 transition-colors ${
+                            className={`w-4 h-4 shrink-0 transition-colors ${
                               item.active ? "text-[#DDB549]" : "text-[#465978] group-hover:text-[#08193C]"
                             }`}
                           />
-                          <span>{item.label}</span>
+                          <span className="truncate">{item.label}</span>
                         </div>
                         {item.badge !== undefined && (
                           <span
-                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                              item.active ? "bg-[#08193C] text-white" : "bg-[#EDF3F7] text-[#465978]"
-                            }`}
+                            className="w-5 h-5 rounded-full bg-[#DDB549] text-[#08193C] text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs"
                           >
                             {item.badge}
                           </span>

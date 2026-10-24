@@ -53,7 +53,7 @@ export function AppShell({ children, showSidebar = true }: AppShellProps) {
         {user && canShowMenu && isMenuOpen && (
           <>
             <div
-              className="fixed inset-0 top-[72px] bg-slate-900/40 backdrop-blur-2xs z-30 transition-opacity"
+              className="fixed inset-0 top-[72px] bg-[#08193C]/40 backdrop-blur-2xs z-30 transition-opacity"
               onClick={() => setIsMenuOpen(false)}
             />
             <div className="fixed top-[72px] left-0 bottom-0 z-40 bg-white shadow-2xl animate-in slide-in-from-left duration-200">
