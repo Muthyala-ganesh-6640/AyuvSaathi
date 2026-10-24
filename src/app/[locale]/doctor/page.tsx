@@ -237,7 +237,7 @@ export default function DoctorDashboardPage() {
 
   if (loading) {
     return (
-      <AppShell>
+      <AppShell showSidebar={false}>
         <div className="py-20 text-center text-slate-500 text-sm">
           Loading authorized Doctor Workspace...
         </div>
@@ -248,7 +248,7 @@ export default function DoctorDashboardPage() {
   const doc = doctorUser?.doctorProfile;
 
   return (
-    <AppShell>
+    <AppShell showSidebar={false}>
       <div className="max-w-6xl mx-auto w-full py-6 px-4 sm:px-6 space-y-6">
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white shadow-md">

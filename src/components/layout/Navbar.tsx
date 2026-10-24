@@ -23,9 +23,10 @@ interface NavbarProps {
   onRefresh?: () => void;
   onToggleMenu?: () => void;
   isMenuOpen?: boolean;
+  showMenuButton?: boolean;
 }
 
-export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: NavbarProps) {
+export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false, showMenuButton = true }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
@@ -37,7 +38,9 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
 
-  const homeHref = user?.role === "doctor" ? "/doctor" : "/dashboard";
+  const isDoctor = user?.role === "doctor" || pathname.includes("/doctor");
+  const shouldDisplayMenuButton = showMenuButton && !isDoctor;
+  const homeHref = isDoctor ? "/doctor" : "/dashboard";
 
   const handleSignOut = async () => {
     try {
@@ -90,7 +93,7 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
     <header className="h-[72px] bg-white border-b border-[#E1EBF0] px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 shrink-0">
       {/* Left: Menu button + Brand block */}
       <div className="flex items-center gap-2">
-        {user && onToggleMenu && (
+        {shouldDisplayMenuButton && user && onToggleMenu && (
           <button
             type="button"
             onClick={onToggleMenu}

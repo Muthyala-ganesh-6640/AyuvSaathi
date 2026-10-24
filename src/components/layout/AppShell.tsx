@@ -18,6 +18,8 @@ export function AppShell({ children, showSidebar = true }: AppShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const isLandingPage = pathname === "/" || pathname === "/auth/role-select";
+  const isDoctor = pathname.includes("/doctor") || user?.role === "doctor";
+  const canShowMenu = showSidebar && !isDoctor;
 
   const fetchUser = async () => {
     try {
@@ -44,10 +46,11 @@ export function AppShell({ children, showSidebar = true }: AppShellProps) {
         onRefresh={fetchUser}
         isMenuOpen={isMenuOpen}
         onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
+        showMenuButton={canShowMenu}
       />
       <div className="flex-1 flex w-full relative">
         {/* Collapsible Menu Drawer: Only shown when logged in and Menu button is toggled */}
-        {user && showSidebar && isMenuOpen && (
+        {user && canShowMenu && isMenuOpen && (
           <>
             <div
               className="fixed inset-0 top-[72px] bg-slate-900/40 backdrop-blur-2xs z-30 transition-opacity"
@@ -63,7 +66,7 @@ export function AppShell({ children, showSidebar = true }: AppShellProps) {
           <div className="w-full max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
-      {user && <MobileNav />}
+      {user && !isDoctor && <MobileNav />}
     </div>
   );
 }
