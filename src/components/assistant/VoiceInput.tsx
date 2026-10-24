@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, Square, Check, X, Loader2 } from "lucide-react";
+import { Mic, Square, Check, X, Loader2, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { speakText } from "@/lib/audio/speech";
 
@@ -23,30 +23,25 @@ export function VoiceInput({
   autoSpeakResponses = false,
 }: VoiceInputProps) {
   const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [interimText, setInterimText] = useState("");
-  const [supported, setSupported] = useState(true);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
 
+  const isListeningRef = useRef(false);
   const recognitionRef = useRef<any>(null);
-  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const activeStreamRef = useRef<MediaStream | null>(null);
   const speechHandleRef = useRef<{ stop: () => void } | null>(null);
   const accumulatedFinalRef = useRef<string>("");
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check browser support on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const hasSpeechRec =
-        Boolean((window as any).SpeechRecognition) ||
-        Boolean((window as any).webkitSpeechRecognition);
-      setSupported(hasSpeechRec);
-    }
-  }, []);
-
-  // Stop listening cleanly
-  const stopListening = useCallback(() => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
+  // Clean up all active audio resources safely
+  const cleanupAudioStreams = useCallback(() => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
     }
 
     if (recognitionRef.current) {
@@ -61,149 +56,224 @@ export function VoiceInput({
       recognitionRef.current = null;
     }
 
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {
+        // ignore
+      }
+      mediaRecorderRef.current = null;
+    }
+
+    if (activeStreamRef.current) {
+      try {
+        activeStreamRef.current.getTracks().forEach((track) => track.stop());
+      } catch {
+        // ignore
+      }
+      activeStreamRef.current = null;
+    }
+
+    isListeningRef.current = false;
     setIsListening(false);
   }, []);
 
-  // Commit transcript when user is done speaking
-  const commitTranscript = useCallback(() => {
-    const fullText = accumulatedFinalRef.current.trim() || interimText.trim();
-    stopListening();
+  // Stop listening and process audio transcript
+  const finishListening = useCallback(async () => {
+    const speechFinal = (accumulatedFinalRef.current || "").trim();
+    const interimSnapshot = (interimText || "").trim();
+    const capturedViaWebSpeech = speechFinal || interimSnapshot;
+
+    cleanupAudioStreams();
     setInterimText("");
     accumulatedFinalRef.current = "";
 
-    if (fullText) {
-      onTranscriptReady(fullText);
-    } else {
-      toast.info("No speech detected. Please speak closer to the microphone and try again.");
+    // If Web Speech API captured spoken text, use it directly
+    if (capturedViaWebSpeech) {
+      onTranscriptReady(capturedViaWebSpeech);
+      return;
     }
-  }, [interimText, onTranscriptReady, stopListening]);
+
+    // Otherwise, fall back to backend Whisper transcription using recorded audio chunks
+    const chunks = audioChunksRef.current;
+    if (chunks.length > 0) {
+      const mimeType = chunks[0]?.type || "audio/webm";
+      const audioBlob = new Blob(chunks, { type: mimeType });
+
+      if (audioBlob.size > 500) {
+        setIsTranscribing(true);
+        try {
+          const form = new FormData();
+          form.append("audio", audioBlob, "voice-input.webm");
+          form.append("language", language);
+
+          const res = await fetch("/api/audio/transcribe", {
+            method: "POST",
+            body: form,
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const transcript = (data.transcript || "").trim();
+            if (transcript) {
+              onTranscriptReady(transcript);
+              return;
+            }
+          }
+        } catch (transcribeErr) {
+          console.warn("[VoiceInput] Server transcription fallback error:", transcribeErr);
+        } finally {
+          setIsTranscribing(false);
+        }
+      }
+    }
+
+    toast.info("No speech detected. Please speak into your microphone and click Done.");
+  }, [cleanupAudioStreams, interimText, language, onTranscriptReady]);
 
   // Cancel listening and discard input
   const cancelListening = useCallback(() => {
-    stopListening();
+    cleanupAudioStreams();
     setInterimText("");
     accumulatedFinalRef.current = "";
+    audioChunksRef.current = [];
     onInterimTranscript?.("");
-  }, [stopListening, onInterimTranscript]);
+  }, [cleanupAudioStreams, onInterimTranscript]);
 
-  // Start fresh SpeechRecognition session
+  // Start Voice Input session
   const startListening = useCallback(async () => {
     if (typeof window === "undefined") return;
 
-    // Stop any playing speech before listening
+    // Stop active audio read-aloud
     if (speechHandleRef.current) {
       speechHandleRef.current.stop();
       speechHandleRef.current = null;
       setIsSpeaking(false);
     }
 
-    const SpeechRecConstructor =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    cleanupAudioStreams();
+    audioChunksRef.current = [];
+    accumulatedFinalRef.current = "";
+    setInterimText("");
+    setRecordingSeconds(0);
 
-    if (!SpeechRecConstructor) {
-      toast.info("Voice dictation is supported in Google Chrome, Microsoft Edge, and modern browsers.");
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      activeStreamRef.current = stream;
+    } catch (err: any) {
+      console.warn("[VoiceInput] Microphone permission/access error:", err);
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        toast.error("Microphone access blocked. Please enable microphone permissions in your browser.");
+      } else {
+        toast.error("Could not access microphone hardware. Please check your audio settings.");
+      }
       return;
     }
 
-    // Check / request mic permission explicitly
+    isListeningRef.current = true;
+    setIsListening(true);
+
+    // 1. Initialize MediaRecorder on the live microphone stream
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Release tracks immediately
-        stream.getTracks().forEach((t) => t.stop());
+      let mimeType = "audio/webm;codecs=opus";
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : MediaRecorder.isTypeSupported("audio/mp4")
+            ? "audio/mp4"
+            : "";
       }
-    } catch (permErr: any) {
-      console.warn("Microphone access error:", permErr);
-      if (permErr.name === "NotAllowedError" || permErr.name === "PermissionDeniedError") {
-        toast.error("Microphone permission denied. Please allow microphone access in your browser settings.");
-        return;
-      }
+
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.start(250); // Collect chunk every 250ms
+    } catch (recorderErr) {
+      console.warn("[VoiceInput] MediaRecorder initialization warning:", recorderErr);
     }
 
-    try {
-      stopListening();
+    // Start elapsed seconds timer
+    const startTime = Date.now();
+    timerIntervalRef.current = setInterval(() => {
+      setRecordingSeconds(Math.floor((Date.now() - startTime) / 1000));
+    }, 500);
 
-      const recognition = new SpeechRecConstructor();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
+    // 2. Initialize Web Speech Recognition in parallel for real-time live preview
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRec) {
+      try {
+        const recognition = new SpeechRec();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
 
-      // Select proper language code
-      if (language === "te") {
-        recognition.lang = "te-IN";
-      } else if (language === "hi") {
-        recognition.lang = "hi-IN";
-      } else {
-        recognition.lang = "en-IN";
-      }
-
-      accumulatedFinalRef.current = "";
-      setInterimText("");
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event: any) => {
-        let currentInterim = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const piece = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            accumulatedFinalRef.current += (accumulatedFinalRef.current ? " " : "") + piece.trim();
-          } else {
-            currentInterim += piece;
-          }
-        }
-
-        const display = accumulatedFinalRef.current
-          ? accumulatedFinalRef.current + (currentInterim ? ` (${currentInterim})` : "")
-          : currentInterim;
-
-        setInterimText(display);
-        onInterimTranscript?.(display);
-
-        // Reset silence timer on new voice activity (auto-commit after 2.5s silence)
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-        }
-        silenceTimerRef.current = setTimeout(() => {
-          commitTranscript();
-        }, 2500);
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn("[VoiceInput] Speech error:", event.error);
-        if (event.error === "not-allowed") {
-          toast.error("Microphone permission blocked. Please enable microphone permissions in your browser URL bar.");
-          stopListening();
-        } else if (event.error === "network") {
-          toast.error("Network error during speech recognition. Check your connection.");
-          stopListening();
-        } else if (event.error !== "no-speech") {
-          toast.error(`Speech recognition: ${event.error}`);
-          stopListening();
-        }
-      };
-
-      recognition.onend = () => {
-        // If still listening and has text, commit it
-        if (accumulatedFinalRef.current.trim()) {
-          commitTranscript();
+        if (language === "te") {
+          recognition.lang = "te-IN";
+        } else if (language === "hi") {
+          recognition.lang = "hi-IN";
         } else {
-          setIsListening(false);
+          recognition.lang = "en-IN";
         }
-      };
 
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err: any) {
-      console.warn("[VoiceInput] Start error:", err);
-      toast.error("Could not activate voice input. Please try again.");
-      stopListening();
+        recognition.onresult = (event: any) => {
+          let currentInterim = "";
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const piece = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              accumulatedFinalRef.current += (accumulatedFinalRef.current ? " " : "") + piece.trim();
+            } else {
+              currentInterim += piece;
+            }
+          }
+
+          const display = accumulatedFinalRef.current
+            ? accumulatedFinalRef.current + (currentInterim ? ` ${currentInterim}` : "")
+            : currentInterim;
+
+          if (display) {
+            setInterimText(display);
+            onInterimTranscript?.(display);
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn("[VoiceInput] Speech recognition event error:", event.error);
+          // If Web Speech errors out (e.g. network/no-speech), audio recording is still capturing via MediaRecorder!
+        };
+
+        recognition.onend = () => {
+          // If user is still actively recording, restart speech recognition to keep live preview going
+          if (isListeningRef.current && recognitionRef.current) {
+            try {
+              recognition.start();
+            } catch {
+              // ignore
+            }
+          }
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+      } catch (recErr) {
+        console.warn("[VoiceInput] Web Speech API start warning:", recErr);
+      }
     }
-  }, [language, onInterimTranscript, stopListening, commitTranscript]);
+  }, [cleanupAudioStreams, language, onInterimTranscript]);
 
-  // Handle auto-speak for assistant responses
+  // Handle read-aloud for assistant responses
   useEffect(() => {
     if (autoSpeakResponses && assistantResponseToSpeak) {
       if (speechHandleRef.current) {
@@ -235,45 +305,59 @@ export function VoiceInput({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      stopListening();
+      cleanupAudioStreams();
       if (speechHandleRef.current) {
         speechHandleRef.current.stop();
       }
     };
-  }, [stopListening]);
+  }, [cleanupAudioStreams]);
 
   return (
     <div className="flex items-center gap-2">
-      {/* Listening State with Live Waves & Done Button */}
+      {/* 1. Active Recording Mode */}
       {isListening ? (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl animate-in fade-in">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-            <span className="text-xs font-semibold text-red-700 max-w-[200px] sm:max-w-xs truncate">
-              {interimText || "Listening (speak now)..."}
+        <div className="flex items-center gap-2 bg-red-50 border border-red-300 px-3 py-1.5 rounded-xl animate-in fade-in shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600" />
+            </span>
+            <span className="text-xs font-mono font-bold text-red-700">
+              {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, "0")}
+            </span>
+            <span className="text-xs font-semibold text-red-900 max-w-[180px] sm:max-w-xs truncate">
+              {interimText || "Listening... speak now"}
             </span>
           </div>
 
-          <div className="flex items-center gap-1 ml-1 border-l border-red-200 pl-2">
+          <div className="flex items-center gap-1.5 ml-1 border-l border-red-200 pl-2">
             <button
               type="button"
-              onClick={commitTranscript}
-              title="Done speaking (Send query)"
-              className="p-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer"
+              onClick={finishListening}
+              title="Finish speaking and send query"
+              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
             >
               <Check className="w-3.5 h-3.5" />
+              <span>Done</span>
             </button>
             <button
               type="button"
               onClick={cancelListening}
               title="Cancel voice input"
-              className="p-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 transition-colors cursor-pointer"
+              className="p-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
+      ) : isTranscribing ? (
+        /* 2. Audio Processing Spinner */
+        <div className="flex items-center gap-2 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-xl">
+          <Loader2 className="w-4 h-4 animate-spin text-[#087F8C]" />
+          <span className="text-xs font-semibold text-[#087F8C]">Transcribing voice...</span>
+        </div>
       ) : isSpeaking ? (
+        /* 3. Stop Audio Playback Button */
         <button
           type="button"
           onClick={() => {
@@ -290,19 +374,16 @@ export function VoiceInput({
           <span className="hidden sm:inline">Stop Audio</span>
         </button>
       ) : (
+        /* 4. Default Idle Microphone Button */
         <button
           type="button"
           onClick={startListening}
           disabled={isProcessing}
-          title={
-            supported
-              ? `Speak query in ${language === "te" ? "Telugu" : language === "hi" ? "Hindi" : "English"}`
-              : "Voice input (Supported in Chrome/Edge)"
-          }
+          title={`Click to speak in ${language === "te" ? "Telugu" : language === "hi" ? "Hindi" : "English"}`}
           className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
             isProcessing
               ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-              : "bg-teal-50 hover:bg-teal-100 text-[#087F8C] border-teal-200 shadow-xs active:scale-95"
+              : "bg-teal-50 hover:bg-teal-100 text-[#087F8C] border-teal-200 shadow-xs active:scale-95 hover:border-teal-300"
           }`}
         >
           {isProcessing ? (
