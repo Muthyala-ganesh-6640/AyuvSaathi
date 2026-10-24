@@ -35,12 +35,16 @@ export async function secretKey() {
 
 export function isSecureContext(): boolean {
   if (process.env.COOKIE_SECURE === "false") return false;
-  return (
-    process.env.COOKIE_SECURE === "true" ||
-    (process.env.NEXT_PUBLIC_APP_URL || "").startsWith("https://") ||
-    process.env.NODE_ENV === "production" ||
-    Boolean(process.env.VERCEL)
-  );
+  if (process.env.COOKIE_SECURE === "true") return true;
+
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "").trim();
+  if (appUrl.startsWith("https://")) return true;
+  if (appUrl.startsWith("http://")) return false;
+
+  // On Vercel, requests are always served over HTTPS
+  if (Boolean(process.env.VERCEL)) return true;
+
+  return false;
 }
 
 /**

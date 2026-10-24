@@ -10,7 +10,7 @@ const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "off" },
   {
     key: "Permissions-Policy",
-    value: "camera=(self), microphone=(), geolocation=(self), payment=()",
+    value: "camera=(self), microphone=(self), geolocation=(self), payment=()",
   },
   {
     key: "Content-Security-Policy",
@@ -18,9 +18,9 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org",
+      "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googleusercontent.com",
       "font-src 'self' data:",
-      "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://nominatim.openstreetmap.org https://overpass-api.de",
+      "connect-src 'self' data: blob: https: wss: http://localhost:8000 http://127.0.0.1:8000",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -34,21 +34,26 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
-async rewrites() {
-  const backendUrl =
-    process.env.BACKEND_URL || "http://127.0.0.1:8000";
-
-  return [
-    {
-      source: "/api/v1/:path*",
-      destination: `${backendUrl}/api/v1/:path*`,
-    },
-    {
-      source: "/api/health",
-      destination: `${backendUrl}/api/health`,
-    },
-  ];
-},
+  async rewrites() {
+    const backendUrl = process.env.BACKEND_URL;
+    if (backendUrl) {
+      return [
+        {
+          source: "/api/v1/:path*",
+          destination: `${backendUrl}/api/v1/:path*`,
+        },
+      ];
+    }
+    if (process.env.NODE_ENV !== "production") {
+      return [
+        {
+          source: "/api/v1/:path*",
+          destination: "http://127.0.0.1:8000/api/v1/:path*",
+        },
+      ];
+    }
+    return [];
+  },
 };
 
 export default withNextIntl(nextConfig);

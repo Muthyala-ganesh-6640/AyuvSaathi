@@ -20,10 +20,14 @@ export async function POST(request: NextRequest) {
     }
 
     const env = getEnv();
-    const apiKey = env.AI_API_KEY || process.env.AI_API_KEY;
+    const apiKey =
+      env.AI_API_KEY ||
+      process.env.AI_API_KEY ||
+      process.env.GROQ_API_KEY ||
+      process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      return jsonError("Speech transcription provider is not configured", 503);
+      return jsonError("Speech transcription provider is not configured. Please set AI_API_KEY or GROQ_API_KEY.", 503);
     }
 
     // Forward audio to Groq Whisper endpoint

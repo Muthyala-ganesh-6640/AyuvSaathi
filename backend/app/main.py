@@ -26,6 +26,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,18 +61,19 @@ app.include_router(timeline.router, prefix=settings.API_V1_STR)
 
 @app.get("/api/health", tags=["Health"])
 def health_check():
+    db_status = "connected"
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
-    except SQLAlchemyError as exc:
-        raise HTTPException(status_code=503, detail="Database is unavailable.") from exc
+    except Exception as exc:
+        db_status = f"unavailable: {str(exc)}"
 
     return {
-        "status": "healthy",
+        "status": "healthy" if db_status == "connected" else "degraded",
         "app": settings.PROJECT_NAME,
         "tagline": settings.PROJECT_TAGLINE,
         "version": settings.VERSION,
-        "database": "connected",
+        "database": db_status,
         "modules_active": [
             "1. Lab Report Intelligence",
             "2. Treatment Plan Management",

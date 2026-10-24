@@ -157,6 +157,15 @@ export function VoiceInput({
     setInterimText("");
     setRecordingSeconds(0);
 
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      toast.error(
+        window.isSecureContext === false
+          ? "Microphone access requires HTTPS. Please access this site over HTTPS or localhost."
+          : "Microphone recording is not supported in this browser."
+      );
+      return;
+    }
+
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
