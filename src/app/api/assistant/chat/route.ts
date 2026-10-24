@@ -8,6 +8,7 @@ import { isAiConfigured } from "@/lib/env";
 import { assistantReply } from "@/lib/ai/provider";
 import { groundedAnswer } from "@/lib/ai/grounded";
 import { compareToSourceRange } from "@/lib/medical/ranges";
+import { validateMedicalQuery } from "@/lib/ai/guardrails";
 
 const chatSchema = z.object({
   conversationId: z.string().uuid().optional(),
@@ -113,6 +114,73 @@ export async function POST(request: NextRequest) {
 
   const conversationId = parsed.data.conversationId ?? crypto.randomUUID();
   const now = nowIso();
+
+  // Assemble patient context tokens to validate queries mentioning unique patient medical data
+  const patientContextSummary = [
+    ...documents.map((d) => d.displayName),
+    ...medications.map((m) => m.name),
+    ...observations.map((o) => o.name),
+    ...visits.map((v) => v.title),
+  ].join(" ");
+
+  // Pre-flight Clinical Guardrail Check: Restrict to healthcare and patient records only
+  const guardrail = validateMedicalQuery(
+    parsed.data.message,
+    parsed.data.language,
+    patientContextSummary
+  );
+
+  // If query is non-medical, immediately reject without calling AI or leaking health records
+  if (!guardrail.isMedical) {
+    const existingConv = parsed.data.conversationId
+      ? await store.getConversation(parsed.data.conversationId, auth.user.id)
+      : null;
+
+    if (!existingConv) {
+      await store.saveConversation({
+        id: conversationId,
+        ownerId: auth.user.id,
+        language: parsed.data.language,
+        title: parsed.data.message.slice(0, 40) + "...",
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else {
+      await store.saveConversation({
+        ...existingConv,
+        updatedAt: now,
+      });
+    }
+
+    // Record user query
+    await store.addMessage({
+      id: crypto.randomUUID(),
+      conversationId,
+      ownerId: auth.user.id,
+      role: "user",
+      content: parsed.data.message,
+      sourceRefs: [],
+      createdAt: now,
+    });
+
+    // Record assistant guardrail refusal
+    const assistantNow = nowIso();
+    const assistantMsg = await store.addMessage({
+      id: crypto.randomUUID(),
+      conversationId,
+      ownerId: auth.user.id,
+      role: "assistant",
+      content: guardrail.refusalMessage,
+      sourceRefs: [],
+      createdAt: assistantNow,
+    });
+
+    return Response.json({
+      conversationId,
+      message: assistantMsg,
+      caution: "Clinical Guardrail: Restricted to healthcare and uploaded medical records.",
+    });
+  }
 
   // Load message history for multi-turn conversation
   const previousMessages = await store.listMessages(conversationId, auth.user.id);

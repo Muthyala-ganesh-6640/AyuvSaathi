@@ -1,5 +1,6 @@
 import type { Observation, Medication, VisitSummary, MedicalDocument } from "@/lib/db/types";
 import { compareToSourceRange } from "@/lib/medical/ranges";
+import { validateMedicalQuery } from "./guardrails";
 
 export interface GroundedContext {
   observations: Observation[];
@@ -13,7 +14,6 @@ export function groundedAnswer(
   recordsOrObs: Observation[] | GroundedContext,
   _locale?: string
 ) {
-  void _locale;
   const context: GroundedContext = Array.isArray(recordsOrObs)
     ? { observations: recordsOrObs }
     : recordsOrObs;
@@ -22,6 +22,19 @@ export function groundedAnswer(
   const medications = context.medications || [];
   const visits = context.visits || [];
   const documents = context.documents || [];
+
+  const contextStr = [
+    ...observations.map((o) => o.name),
+    ...medications.map((m) => m.name),
+    ...documents.map((d) => d.displayName),
+    ...visits.map((v) => v.title),
+  ].join(" ");
+
+  // Pre-flight clinical guardrail check
+  const guardrail = validateMedicalQuery(question, _locale, contextStr);
+  if (!guardrail.isMedical) {
+    return guardrail.refusalMessage;
+  }
 
   const hasAnyData =
     observations.length > 0 || medications.length > 0 || visits.length > 0 || documents.length > 0;

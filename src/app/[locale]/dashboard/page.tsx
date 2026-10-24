@@ -552,10 +552,14 @@ export default function DashboardPage() {
       if (!Number.isFinite(value) || !Number.isFinite(timestamp) || timestamp < cutoff.getTime()) {
         return [];
       }
-      return [{ date: formatDate(sourceDate, locale), value, timestamp }];
+      return [{
+        date: formatDate(sourceDate, locale),
+        value,
+        timestamp,
+        sourceName: (observation as any).sourceName || "Uploaded Report",
+      }];
     })
-    .sort((a, b) => a.timestamp - b.timestamp)
-    .map(({ date, value }) => ({ date, value }));
+    .sort((a, b) => a.timestamp - b.timestamp);
 
   const latestGlucose = chartData[chartData.length - 1];
   const displayName = data?.user?.displayName || t("patientRole");
@@ -1018,6 +1022,10 @@ export default function DashboardPage() {
                             <YAxis tick={{ fontSize: 9, fill: "#465978" }} axisLine={false} tickLine={false} />
                             <Tooltip
                               contentStyle={{ backgroundColor: "#ffffff", borderRadius: "8px", border: "1px solid #D4E1EE", fontSize: "11px" }}
+                              formatter={(val: any, _name: any, item: any) => [
+                                `${val} mg/dL`,
+                                item?.payload?.sourceName ? `📄 ${item.payload.sourceName}` : "Blood Glucose",
+                              ]}
                             />
                             <Line
                               type="monotone"

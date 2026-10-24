@@ -19,6 +19,7 @@ import {
   GET as getObservations,
   POST as postObservations,
 } from "@/app/api/observations/route";
+import { GET as getMultiReportAnalytics } from "@/app/api/analytics/multi-report/route";
 import {
   GET as getObservationById,
   PATCH as patchObservationById,
@@ -252,6 +253,16 @@ describe("Exhaustive API Route Audit & Validation", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.observations)).toBe(true);
+  });
+
+  it("GET /api/analytics/multi-report: computes multi-report comparative biomarker analytics", async () => {
+    const res = await getMultiReportAnalytics(req("/api/analytics/multi-report", "GET", { cookie: sessionCookie }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.summary).toBeDefined();
+    expect(Array.isArray(data.biomarkers)).toBe(true);
+    expect(Array.isArray(data.medicationCorrelations)).toBe(true);
+    expect(Array.isArray(data.insights)).toBe(true);
   });
 
   it("GET /api/observations/[id]: reads specific observation", async () => {
@@ -532,6 +543,23 @@ describe("Exhaustive API Route Audit & Validation", () => {
     const data = await res.json();
     expect(data.message.content).toBeDefined();
     expect(data.caution).toBeDefined();
+  });
+
+  it("POST /api/assistant/chat: blocks non-medical queries with clinical guardrail refusal", async () => {
+    const res = await assistantChat(
+      req("/api/assistant/chat", "POST", {
+        cookie: sessionCookie,
+        body: {
+          conversationId: createdConvId,
+          message: "Write a python script to scrape data from websites",
+          language: "en",
+        },
+      })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.message.content).toContain("AyuvSaathi Clinical AI Assistant");
+    expect(data.caution).toContain("Clinical Guardrail");
   });
 
   // 14. Care Nearby (with verified fallback)

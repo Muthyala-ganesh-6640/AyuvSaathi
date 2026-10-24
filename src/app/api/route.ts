@@ -31,6 +31,7 @@ export async function GET() {
         timeline: "/api/timeline",
         appointments: "/api/appointments",
         observations: "/api/observations",
+        multiReportAnalytics: "/api/analytics/multi-report",
         wellness: "/api/wellness/recommendations",
       },
       assistant: {
