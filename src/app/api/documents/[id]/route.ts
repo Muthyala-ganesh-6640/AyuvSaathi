@@ -4,6 +4,7 @@ import { store } from "@/lib/db/file-store";
 import { jsonError, withUser } from "@/lib/api";
 import { nowIso } from "@/lib/utils";
 import type { DocumentCategory } from "@/lib/db/types";
+import { buildReportAnalysis } from "@/lib/medical/report-summary";
 
 const patchDocSchema = z.object({
   displayName: z.string().min(1).max(200).optional(),
@@ -31,7 +32,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     store.listObservations(auth.user.id, id),
     store.listExtractions(id, auth.user.id),
   ]);
-  return Response.json({ document, observations, extractions });
+  const latestExtraction = extractions.sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] || null;
+  const analysis = buildReportAnalysis(document, observations, latestExtraction, auth.user.interfaceLanguage);
+
+  return Response.json({ document, observations, extractions, analysis });
 }
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {

@@ -13,6 +13,7 @@ import {
 import type { ExtractionPayload } from "@/lib/ai/schemas";
 import type { DocumentCategory } from "@/lib/db/types";
 import { routing } from "@/i18n/routing";
+import { buildReportAnalysis } from "@/lib/medical/report-summary";
 
 export async function GET(request: NextRequest) {
   const auth = await withUser(request);
@@ -266,8 +267,55 @@ export async function POST(request: NextRequest) {
     try {
       const text = await extractPdfText(buffer);
       if (!text) {
-        processingStatus = isAiConfigured() ? "needs_review" : "manual";
-        notes.push("No selectable text was found. Image-only PDFs need AI vision or manual entry.");
+        if (isAiConfigured()) {
+          const rendered = await renderPdfPages(buffer);
+          const extracted = await extractMedicalDocumentFromImages({
+            images: rendered.images,
+            language: auth.user.aiLanguage,
+            documentType: cat === "diagnostic_report" ? "diagnostic_report" : "lab_report",
+          });
+          extractionId = crypto.randomUUID();
+          if (extracted.reportDate) {
+            detectedReportDate = extracted.reportDate;
+          }
+          await store.saveExtraction({
+            id: extractionId,
+            documentId: id,
+            ownerId: auth.user.id,
+            structured: extracted,
+            confidence: extracted.overallConfidence,
+            validationStatus: "valid",
+            confirmationStatus: "unconfirmed",
+            model: process.env.AI_MODEL,
+            notes: extracted.notes,
+            createdAt: created,
+            updatedAt: created,
+          });
+          for (const obs of extracted.observations.filter((o) => o.presentInSource !== false)) {
+            await store.saveObservation({
+              id: crypto.randomUUID(),
+              ownerId: auth.user.id,
+              documentId: id,
+              extractionId,
+              name: obs.name,
+              value: obs.value,
+              unit: obs.unit ?? "",
+              referenceRange: obs.referenceRange,
+              uncertain: obs.uncertain ?? true,
+              verificationStatus: "unconfirmed",
+              provenance: "ai_extracted",
+              createdAt: created,
+              updatedAt: created,
+            });
+          }
+          processingStatus =
+            extracted.handwritingDetected || (extracted.overallConfidence ?? 0) < 0.7
+              ? "needs_review"
+              : "extracted";
+        } else {
+          processingStatus = "unconfigured";
+          notes.push("No selectable text was found. Image-only PDFs need AI vision or manual entry.");
+        }
       } else if (isAiConfigured()) {
         const extracted = await extractFromText({
           text,
@@ -321,13 +369,69 @@ export async function POST(request: NextRequest) {
       else processingStatus = "failed";
       notes.push("Automatic extraction could not be completed. The original file was still saved.");
     }
+  } else if (kind === "jpeg" || kind === "png") {
+    if (isAiConfigured()) {
+      try {
+        const extracted = await extractMedicalDocumentFromImages({
+          images: [
+            {
+              mimeType: kind === "png" ? "image/png" : "image/jpeg",
+              base64: buffer.toString("base64"),
+            },
+          ],
+          language: auth.user.aiLanguage,
+          documentType: cat === "diagnostic_report" ? "diagnostic_report" : "lab_report",
+        });
+        extractionId = crypto.randomUUID();
+        if (extracted.reportDate) {
+          detectedReportDate = extracted.reportDate;
+        }
+        await store.saveExtraction({
+          id: extractionId,
+          documentId: id,
+          ownerId: auth.user.id,
+          structured: extracted,
+          confidence: extracted.overallConfidence,
+          validationStatus: "valid",
+          confirmationStatus: "unconfirmed",
+          model: process.env.AI_MODEL,
+          notes: extracted.notes,
+          createdAt: created,
+          updatedAt: created,
+        });
+        for (const obs of extracted.observations.filter((o) => o.presentInSource !== false)) {
+          await store.saveObservation({
+            id: crypto.randomUUID(),
+            ownerId: auth.user.id,
+            documentId: id,
+            extractionId,
+            name: obs.name,
+            value: obs.value,
+            unit: obs.unit ?? "",
+            referenceRange: obs.referenceRange,
+            uncertain: obs.uncertain ?? true,
+            verificationStatus: "unconfirmed",
+            provenance: "ai_extracted",
+            createdAt: created,
+            updatedAt: created,
+          });
+        }
+        processingStatus =
+          extracted.handwritingDetected || (extracted.overallConfidence ?? 0) < 0.7
+            ? "needs_review"
+            : "extracted";
+      } catch (err) {
+        console.error("[Document Image Vision Extraction] Failed:", err);
+        processingStatus = "needs_review";
+        notes.push("Image was saved. Automatic vision extraction encountered an error; values can be confirmed manually.");
+      }
+    } else {
+      processingStatus = "unconfigured";
+      notes.push("Image document was saved. AI provider is not configured for automatic vision extraction.");
+    }
   } else {
-    processingStatus = isAiConfigured() ? "needs_review" : "manual";
-    notes.push(
-      kind === "jpeg" || kind === "png"
-        ? "Image documents are not automatically read unless a vision-capable AI provider is configured. Do not guess handwritten prescriptions."
-        : "Manual review required.",
-    );
+    processingStatus = "manual";
+    notes.push("Manual review required.");
   }
 
   const doc = await store.saveDocument({
@@ -383,9 +487,18 @@ export async function POST(request: NextRequest) {
     createdAt: created,
   });
 
+  const [savedObservations, savedExtractions] = await Promise.all([
+    store.listObservations(auth.user.id, id),
+    store.listExtractions(id, auth.user.id),
+  ]);
+  const latestExt = savedExtractions[0] || null;
+  const analysis = buildReportAnalysis(doc, savedObservations, latestExt, auth.user.interfaceLanguage);
+
   return Response.json({
     document: doc,
     notes,
+    observations: savedObservations,
+    analysis,
     prescriptionExtraction: prescriptionExtraction ?? null,
   });
 }

@@ -251,9 +251,8 @@ Rules:
 - If a reference range is not printed, omit it.
 - If handwriting is unclear, set handwritingDetected to true and uncertain to true where appropriate.
 - Never guess a medicine name, strength, or dose.
-- For a discharge summary, write a concise source-grounded dischargeSummary covering admission/discharge dates, stated diagnosis, treatment or procedures, discharge condition, medications, and follow-up instructions only when present. Omit missing details rather than guessing.
-- Translate the dischargeSummary into the requested language in translatedSummary. Preserve medicine names, doses, units, and dates.
-- For other document types, omit dischargeSummary and translatedSummary unless the source itself is explicitly a discharge summary.
+- For a discharge summary or medical report (lab report, diagnostic report, doctor consultation), write a comprehensive source-grounded clinical summary in dischargeSummary covering the tests performed, key results, which values are normal, which are out-of-range/elevated, and any physician impressions or follow-up instructions legible in the source.
+- Translate this clinical summary into the requested language in translatedSummary. Preserve medicine names, doses, units, and dates.
 - Mark uncertain information clearly.
 - Do not diagnose or recommend treatment.
 - Return valid JSON only.
@@ -277,7 +276,7 @@ ${input.text.slice(0, 20000)}`,
 export async function extractMedicalDocumentFromImages(input: {
   images: PrescriptionImage[];
   language: string;
-  documentType?: "prescription" | "discharge_summary";
+  documentType?: "prescription" | "discharge_summary" | "lab_report" | "diagnostic_report";
 }): Promise<ExtractionPayload> {
   if (!isAiConfigured()) {
     throw new Error("AI_UNCONFIGURED");
@@ -293,10 +292,14 @@ export async function extractMedicalDocumentFromImages(input: {
   const provider = (env.AI_PROVIDER ?? "openai").toLowerCase();
   const documentType = input.documentType ?? "prescription";
   const isDischargeSummary = documentType === "discharge_summary";
+  const isLabReport = documentType === "lab_report" || documentType === "diagnostic_report";
   const system = isDischargeSummary
     ? `${SYSTEM_SAFETY}
 You are carefully reading a hospital discharge document. Summarize only information legible in the source. Never infer missing diagnoses, treatments, medicines, or instructions.`
-    : `${SYSTEM_SAFETY}
+    : isLabReport
+      ? `${SYSTEM_SAFETY}
+You are carefully reading a medical laboratory or diagnostic test report image. Extract all test names, values, units, reference ranges, and doctor notes. Provide a comprehensive source-grounded clinical summary.`
+      : `${SYSTEM_SAFETY}
 You are carefully transcribing a prescription image. Never infer a medicine, strength, dose, or schedule from context.`;
   const languageName =
     input.language === "hi"
@@ -313,6 +316,15 @@ medications[{name,strength,instructions,route,frequency,handwriting,uncertain}],
 handwritingDetected, unreadableRegions, notes, overallConfidence.
 
 Set documentType to "discharge_summary". Write a concise, clear summary in ${languageName} covering admission and discharge dates, stated diagnosis, treatment/procedures, condition at discharge, prescribed discharge medicines, and follow-up instructions only if each is legible in the document. Put the summary in dischargeSummary and a faithful translation in translatedSummary. Omit unavailable details; do not guess or add medical advice. Preserve medicine names, doses, units, and dates. Include observations and medicines only when explicitly listed. Mark unclear text as uncertain and describe unreadable regions. Return valid JSON only.`
+    : isLabReport
+      ? `Read this medical laboratory / diagnostic test report image and return one compact JSON object with:
+documentType, sourceLanguage, labName, reportDate, patientNamePrinted, doctorName,
+dischargeSummary, translatedSummary,
+observations[{name,value,unit,referenceRange,page,confidence,uncertain,presentInSource}],
+medications[{name,strength,instructions,route,frequency,handwriting,uncertain}],
+handwritingDetected, unreadableRegions, notes, overallConfidence.
+
+Set documentType to "lab_report". Carefully extract all test names, numerical or qualitative results, units, and reference ranges into observations. Write a comprehensive, clear clinical summary of this report in ${languageName} in dischargeSummary: summarize what tests were performed, key findings, which parameters are within standard ranges, and clearly highlight any abnormal or out-of-range values. Put the summary in dischargeSummary and a faithful translation in translatedSummary. Omit unavailable details; do not guess. Return valid JSON only.`
     : `Read only this prescription; ignore unrelated text or documents. Return one compact JSON object with:
 documentType, sourceLanguage, reportDate, patientNamePrinted, doctorName,
 prescriptionSummary, translatedSummary,
