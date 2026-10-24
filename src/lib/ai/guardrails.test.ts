@@ -8,6 +8,9 @@ describe("AI Clinical Guardrails", () => {
       expect(validateMedicalQuery("What are the early signs of type 2 diabetes?").isMedical).toBe(true);
       expect(validateMedicalQuery("Can high blood pressure cause dizziness?").isMedical).toBe(true);
       expect(validateMedicalQuery("What is a normal resting heart rate?").isMedical).toBe(true);
+      expect(validateMedicalQuery("what is heamoglobin").isMedical).toBe(true);
+      expect(validateMedicalQuery("tell usage of dolo 650").isMedical).toBe(true);
+      expect(validateMedicalQuery("paracetamol 500mg uses and side effects").isMedical).toBe(true);
     });
 
     it("allows queries referencing uploaded reports, lab results, and prescriptions", () => {

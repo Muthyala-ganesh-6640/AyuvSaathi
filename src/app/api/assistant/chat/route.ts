@@ -183,6 +183,63 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // Handle polite greetings directly without invoking LLM or dumping raw lab values
+  if (guardrail.category === "general_greeting") {
+    const greetings: Record<string, string> = {
+      en: "Hello! I am your AyuvSaathi Clinical Health Assistant. I am here to help you understand your uploaded medical lab reports, prescriptions, medications, and health records. How can I assist you today?",
+      te: "నమస్కారం! నేను మీ ఆయువ్‌సాథి మెడికల్ ఏఐ అసిస్టెంట్‌ని. మీ మెడికల్ ల్యాబ్ రిపోర్టులు, ప్రిస్క్రిప్షన్లు, మందులు మరియు ఆరోగ్య రికార్డులను అర్థం చేసుకోవడానికి నేను సిద్ధంగా ఉన్నాను. ఈరోజు మీకు ఎలా సహాయపడాలి?",
+      hi: "नमस्ते! मैं आपका आयुवसाथी क्लिनिकल एआई सहायक हूँ। मैं आपकी अपलोड की गई मेडिकल रिपोर्ट, पर्चे (प्रिस्क्रिप्शन), दवाओं और स्वास्थ्य रिकॉर्ड को समझने में आपकी मदद के लिए उपस्थित हूँ। आज मैं आपकी क्या सहायता कर सकता हूँ?",
+    };
+    const greetingText = greetings[parsed.data.language || "en"] || greetings.en;
+
+    const existingConv = parsed.data.conversationId
+      ? await store.getConversation(parsed.data.conversationId, auth.user.id)
+      : null;
+
+    if (!existingConv) {
+      await store.saveConversation({
+        id: conversationId,
+        ownerId: auth.user.id,
+        language: parsed.data.language,
+        title: parsed.data.message.slice(0, 40) + "...",
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else {
+      await store.saveConversation({
+        ...existingConv,
+        updatedAt: now,
+      });
+    }
+
+    await store.addMessage({
+      id: crypto.randomUUID(),
+      conversationId,
+      ownerId: auth.user.id,
+      role: "user",
+      content: parsed.data.message,
+      sourceRefs: [],
+      createdAt: now,
+    });
+
+    const assistantNow = nowIso();
+    const assistantMsg = await store.addMessage({
+      id: crypto.randomUUID(),
+      conversationId,
+      ownerId: auth.user.id,
+      role: "assistant",
+      content: greetingText,
+      sourceRefs: [],
+      createdAt: assistantNow,
+    });
+
+    return Response.json({
+      conversationId,
+      message: assistantMsg,
+      caution: "Clinical Assistant: Ready to answer questions on your reports, prescriptions, and records.",
+    });
+  }
+
   // Load message history for multi-turn conversation
   const previousMessages = await store.listMessages(conversationId, auth.user.id);
   const history = previousMessages.map((m) => ({

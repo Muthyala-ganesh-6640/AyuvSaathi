@@ -4,8 +4,8 @@
  * Enforces strict medical and health-only domain restrictions:
  * Responds ONLY to medical related issues along with prescriptions, medical records, and diagnostic reports.
  * Restricts all non-medical data and non-medical queries (coding, politics, general trivia, finance, entertainment, prompt injection)
- * while ensuring valid clinical questions, prescriptions, patient health records, and reports (in English, Telugu, and Hindi)
- * are accurately recognized and answered without interrupting any API calls.
+ * while ensuring valid clinical questions, common medicines (e.g. Dolo 650, Paracetamol), medical reports, and records
+ * in English, Telugu, and Hindi are accurately recognized and answered without interrupting any API calls.
  */
 
 export interface GuardrailResult {
@@ -55,6 +55,16 @@ const MEDICAL_RECORDS_PHRASES = [
   /\b(prescriptions?|prescribed|rx|medicines?|medications?|dosage|doses?|tablets?|capsules?|syrups?|injections?)\b/i,
   /\b(medication schedule|medicine timing|pill reminder|daily dose)\b/i,
   
+  // Specific common pharmaceuticals and OTC medicines
+  /\b(dolo|dolo\s*650|paracetamol|crocin|calpol|combiflam|pan\s*40|pantoprazole|pantocid|omeprazole|rabeprazole)\b/i,
+  /\b(azithral|azithromycin|amoxicillin|augmentin|cetirizine|allegra|fexofenadine|montair|montelukast)\b/i,
+  /\b(telma|telmisartan|amlodipine|atorva|atorvastatin|glycomet|metformin|aspirin|ecosprin|insulin)\b/i,
+  /\b(ciprofloxacin|ofloxacin|flagyl|metronidazole|gelusil|digene|becosules|neurobion|limcee|zincovit)\b/i,
+
+  // Medical inquiry patterns (e.g. "tell usage of dolo 650", "what is heamoglobin")
+  /\b(usage|uses?|dosage|dose|side\s*effects?|indication|how to take|when to take|can i take)\s+(of|for|about)?\b/i,
+  /\b(what is|meaning of|tell (me )?(about|usage of)?)\s+(a\s+|the\s+)?(he?a?moglobin|glucose|sugar|creatinine|platelets?|cholesterol|wbc|rbc|thyroid|tsh|hba1c|bp|blood pressure|fever|infection|pain|tablet|medicine|drug|report|prescription|test|disease|symptom)/i,
+
   // Reports & Lab Diagnostics
   /\b(medical reports?|lab reports?|diagnostic reports?|pathology reports?|blood reports?|test reports?)\b/i,
   /\b(lab results?|blood test results?|test results?|diagnostic results?|test values?|biomarker results?)\b/i,
@@ -84,23 +94,30 @@ const INDIC_MEDICAL_KEYWORDS = [
   "ग्लूकोज", "बीपी", "हीमोग्लोबिन", "बुखार", "सिरदर्द", "दर्द", "जांच", "मान"
 ];
 
-// General medical vocabulary
+// General medical vocabulary (including alternate spellings and common Indian pharmaceuticals)
 const MEDICAL_KEYWORDS = [
   // General clinical & practice
-  "health", "medical", "medicine", "doctor", "physician", "hospital", "clinic", "nurse",
-  "patient", "disease", "illness", "condition", "disorder", "syndrome", "symptom", "diagnosis",
+  "health", "medical", "medicine", "medicines", "doctor", "physician", "hospital", "clinic", "nurse",
+  "patient", "disease", "illness", "condition", "disorder", "syndrome", "symptom", "symptoms", "diagnosis",
   "prognosis", "treatment", "therapy", "surgery", "operation", "admitted", "discharge",
-  "prescription", "prescribed", "dose", "dosage", "tablet", "capsule", "syrup", "injection",
-  "ointment", "drops", "pills", "medication", "drug", "antibiotic", "painkiller", "steroid",
-  "side effect", "adverse", "contraindication", "interaction",
+  "prescription", "prescribed", "dose", "dosage", "tablet", "tablets", "capsule", "syrup", "injection",
+  "ointment", "drops", "pills", "medication", "medications", "drug", "drugs", "antibiotic", "painkiller", "steroid",
+  "side effect", "side effects", "adverse", "contraindication", "interaction", "usage", "uses",
 
-  // Diagnostic tests & biomarkers
-  "report", "lab", "test", "result", "scan", "x-ray", "xray", "mri", "ct scan", "ultrasound",
+  // Common medicines and brands
+  "dolo", "dolo 650", "paracetamol", "crocin", "calpol", "pan 40", "pantoprazole", "pantocid", "omeprazole",
+  "rabeprazole", "azithral", "azithromycin", "amoxicillin", "augmentin", "combiflam", "ibuprofen", "cetirizine",
+  "allegra", "fexofenadine", "montair", "montelukast", "telma", "telmisartan", "amlodipine", "atorva",
+  "atorvastatin", "glycomet", "metformin", "aspirin", "ecosprin", "insulin", "ciprofloxacin", "ofloxacin",
+  "flagyl", "metronidazole", "gelusil", "digene", "cough syrup", "antacid", "multivitamin", "becosules",
+
+  // Diagnostic tests & biomarkers (with alternate British/Indian spellings and typos)
+  "report", "reports", "lab", "test", "tests", "result", "results", "scan", "x-ray", "xray", "mri", "ct scan", "ultrasound",
   "ecg", "ekg", "eeg", "biopsy", "pathology", "culture", "cbc", "complete blood count",
-  "hemoglobin", "hb", "wbc", "rbc", "platelet", "platelets", "glucose", "sugar", "fasting",
-  "postprandial", "ppbs", "fbs", "hba1c", "cholesterol", "lipid", "triglycerides", "hdl", "ldl",
-  "vldl", "creatinine", "urea", "bun", "uric acid", "bilirubin", "sgpt", "alt", "sgot", "ast",
-  "alkaline phosphatase", "alp", "thyroid", "tsh", "t3", "t4", "vitamin d", "b12", "calcium",
+  "hemoglobin", "haemoglobin", "heamoglobin", "hb", "wbc", "rbc", "platelet", "platelets", "glucose", "sugar", "fasting",
+  "postprandial", "ppbs", "fbs", "hba1c", "cholesterol", "cholestrol", "lipid", "triglycerides", "hdl", "ldl",
+  "vldl", "creatinine", "creatinin", "urea", "bun", "uric acid", "bilirubin", "sgpt", "alt", "sgot", "ast",
+  "alkaline phosphatase", "alp", "thyroid", "thyriod", "tsh", "t3", "t4", "vitamin d", "b12", "calcium",
   "potassium", "sodium", "electrolyte", "urine", "stool", "esr", "crp", "ferritin", "iron",
   "out of range", "normal range", "reference range", "high", "low", "elevated", "abnormal",
 
@@ -118,7 +135,7 @@ const MEDICAL_KEYWORDS = [
   "pain", "ache", "swelling", "inflammation", "fatigue", "tired", "weakness", "dizziness",
   "vertigo", "nausea", "vomiting", "shortness of breath", "breathless", "wheezing", "chest pain",
   "palpitation", "numbness", "tingling", "cramp", "stiffness", "bleeding", "bruise", "itch",
-  "chills", "sweating", "weight loss", "weight gain", "loss of appetite", "vital", "pulse",
+  "chills", "sweating", "weight loss", "weight gain", "loss of appetite", "vital", "vitals", "pulse",
   "heart rate", "oxygen", "spo2", "temperature",
 
   // Anatomy & Organs

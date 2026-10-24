@@ -182,6 +182,31 @@ async function chat(messages: ChatMessage[]): Promise<string> {
     }
 
     if (response.status === 429) {
+      // If Groq or OpenAI hits rate limit on the primary model, try fallback models!
+      const currentModel = modelName();
+      const candidateFallbacks = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"].filter((m) => m !== currentModel);
+      for (const fallbackModel of candidateFallbacks) {
+        try {
+          const fallbackRes = await fetch(endpoint(), {
+            method: "POST",
+            headers: requestHeaders,
+            body: JSON.stringify({
+              ...requestBody,
+              model: fallbackModel,
+            }),
+            signal: controller.signal,
+          });
+          if (fallbackRes.ok) {
+            const fbData = (await fallbackRes.json()) as {
+              choices?: { message?: { content?: string | null } }[];
+            };
+            const fbContent = fbData.choices?.[0]?.message?.content;
+            if (fbContent) return fbContent;
+          }
+        } catch {
+          // Continue to next fallback model
+        }
+      }
       throw await providerError(response);
     }
 
