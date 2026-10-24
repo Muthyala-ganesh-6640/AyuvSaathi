@@ -12,7 +12,7 @@ export const SESSION_COOKIE = "arogya_session";
 
 let fallbackInMemorySecret: string | null = null;
 
-async function secretKey() {
+export async function secretKey() {
   const env = getEnv();
   const secret = env.AUTH_SECRET || process.env.AUTH_SECRET || "ayuvsaathi-super-secret-auth-key-2026-production-ready-companion";
   if (secret && secret.length >= 16) {
