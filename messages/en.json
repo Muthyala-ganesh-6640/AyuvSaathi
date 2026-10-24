@@ -294,7 +294,8 @@
     "statusCompleted": "Completed",
     "statusCancelled": "Cancelled",
     "notes": "Preparation Notes",
-    "noAppointments": "No upcoming appointments scheduled."
+    "noAppointments": "No upcoming appointments scheduled.",
+    "eventTitle": "Appointment Title"
   },
   "assistant": {
     "title": "AI Health Information Assistant",

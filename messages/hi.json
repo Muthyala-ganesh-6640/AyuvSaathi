@@ -295,7 +295,8 @@
     "statusCompleted": "पूरा हुआ",
     "statusCancelled": "रद्द",
     "notes": "तैयारी नोट्स",
-    "noAppointments": "कोई आगामी अपॉइंटमेंट नहीं है।"
+    "noAppointments": "कोई आगामी अपॉइंटमेंट नहीं है।",
+    "eventTitle": "अपॉइंटमेंट शीर्षक"
   },
   "assistant": {
     "title": "AI स्वास्थ्य जानकारी सहायक",

@@ -295,7 +295,8 @@
     "statusCompleted": "పూర్తయింది",
     "statusCancelled": "రద్దు చేయబడింది",
     "notes": "గమనికలు",
-    "noAppointments": "రాబోయే అపాయింట్‌మెంట్లు లేవు."
+    "noAppointments": "రాబోయే అపాయింట్‌మెంట్లు లేవు.",
+    "eventTitle": "అపాయింట్‌మెంట్ శీర్షిక"
   },
   "assistant": {
     "title": "AI ఆరోగ్య సమాచార సహాయకుడు",
