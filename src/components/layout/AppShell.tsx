@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "@/i18n/navigation";
 import { Navbar } from "./Navbar";
 import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
@@ -12,8 +13,11 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, showSidebar = true }: AppShellProps) {
+  const pathname = usePathname();
   const [user, setUser] = useState<{ displayName?: string; email?: string; role?: string } | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const isLandingPage = pathname === "/" || pathname === "/auth/role-select";
 
   const fetchUser = async () => {
     try {
@@ -43,7 +47,7 @@ export function AppShell({ children, showSidebar = true }: AppShellProps) {
       />
       <div className="flex-1 flex w-full relative">
         {/* Collapsible Menu Drawer: Hidden by default, shown when Menu button is pressed */}
-        {user && showSidebar && isMenuOpen && (
+        {showSidebar && isMenuOpen && (
           <>
             <div
               className="fixed inset-0 top-[72px] bg-slate-900/40 backdrop-blur-2xs z-30 transition-opacity"
@@ -55,7 +59,7 @@ export function AppShell({ children, showSidebar = true }: AppShellProps) {
           </>
         )}
         <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-7 min-w-0 overflow-y-auto w-full">
-          <MedicalDisclaimer className="mb-5 max-w-7xl" />
+          {!isLandingPage && <MedicalDisclaimer className="mb-5 max-w-7xl" />}
           <div className="w-full max-w-7xl mx-auto">{children}</div>
         </main>
       </div>

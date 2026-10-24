@@ -103,11 +103,11 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
           <button
             type="button"
             onClick={onToggleMenu}
-            className="flex items-center gap-1.5 p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
             title={isMenuOpen ? "Hide Menu" : "Show Menu"}
           >
-            {isMenuOpen ? <X className="w-5 h-5 text-teal-700" /> : <Menu className="w-5 h-5 text-teal-700" />}
-            <span className="text-xs font-bold hidden sm:inline">{isMenuOpen ? "Close" : "Menu"}</span>
+            {isMenuOpen ? <X className="w-4 h-4 text-teal-700" /> : <Menu className="w-4 h-4 text-slate-700" />}
+            <span className="text-xs font-bold">{isMenuOpen ? "Close" : "Menu"}</span>
           </button>
         )}
         <BrandLogo variant="header" href={homeHref} />
@@ -284,7 +284,7 @@ export function Navbar({ user, onRefresh, onToggleMenu, isMenuOpen = false }: Na
         ) : (
           <Link
             href="/auth/sign-in"
-            className="px-3 py-1.5 rounded-xl bg-[#087F8C] hover:bg-[#07545B] text-white text-xs font-semibold shadow-xs transition-colors"
+            className="px-4 py-2 rounded-xl bg-[#17344F] hover:bg-[#087F8C] text-white text-xs font-bold shadow-xs transition-colors"
           >
             {h("signIn")}
           </Link>
