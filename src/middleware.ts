@@ -38,7 +38,7 @@ export default async function middleware(request: NextRequest) {
 
   // Case A: Unauthenticated user trying to access protected dashboards/modules
   if (!session && !isPublicRoute) {
-    const signInUrl = new URL(`/${locale}/auth/role-select`, request.url);
+    const signInUrl = new URL(`/${locale}/auth/sign-in`, request.url);
     signInUrl.searchParams.set("from", pathname);
     return NextResponse.redirect(signInUrl);
   }

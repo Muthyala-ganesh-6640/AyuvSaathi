@@ -18,6 +18,7 @@ export async function GET() {
         signIn: "/api/auth/sign-in",
         signUp: "/api/auth/sign-up",
         signOut: "/api/auth/sign-out",
+        demoLogin: "/api/auth/demo-login",
         me: "/api/auth/me",
         reset: "/api/auth/reset",
         switchRole: "/api/auth/switch-role",

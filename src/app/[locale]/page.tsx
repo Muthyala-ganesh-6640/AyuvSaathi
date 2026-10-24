@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { AppShell } from "@/components/layout/AppShell";
+import { useLocale } from "next-intl";
+import { toast } from "sonner";
 import {
   User,
   Stethoscope,
@@ -10,9 +12,31 @@ import {
   ShieldCheck,
   QrCode,
   Activity,
+  Sparkles,
 } from "lucide-react";
 
 export default function LandingPage() {
+  const currentLocale = useLocale();
+
+  const handleQuickDemoLogin = async (role: "patient" | "doctor") => {
+    try {
+      const res = await fetch("/api/auth/demo-login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ role, locale: currentLocale || "en" }),
+      });
+      const data = await res.json();
+      if (res.ok && data.targetDashboard) {
+        toast.success(`Entering ${role === "doctor" ? "Doctor Portal" : "Patient Dashboard"}...`);
+        window.location.href = data.targetDashboard;
+      } else {
+        toast.error("Demo access unavailable");
+      }
+    } catch {
+      toast.error("Network error during demo login");
+    }
+  };
+
   const roles = [
     {
       id: "patient",
@@ -124,7 +148,16 @@ export default function LandingPage() {
                     <ArrowRight className="w-4 h-4 text-[#DDB549] group-hover:translate-x-0.5 transition-transform" />
                   </Link>
 
-                  <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDemoLogin(role.id as "patient" | "doctor")}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#EDF3F7] hover:bg-[#D4E1EE] text-[#08193C] text-xs font-bold transition-colors cursor-pointer border border-[#D4E1EE] shadow-2xs"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-[#DDB549]" />
+                    <span>Instant Demo {role.id === "doctor" ? "Doctor" : "Patient"} Access</span>
+                  </button>
+
+                  <div className="text-center pt-1">
                     <Link
                       href={role.sublink.href}
                       className="text-xs text-[#465978] hover:text-[#08193C] hover:underline font-medium"

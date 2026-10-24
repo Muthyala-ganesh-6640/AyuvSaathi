@@ -7,6 +7,7 @@ import { localDateKey } from "@/lib/medical/schedules";
 import { serviceStatus } from "@/lib/env";
 import { canAccessPatientData } from "@/lib/auth/authorization";
 import { generateWellnessRecommendations } from "@/lib/medical/wellness";
+import { seedSyntheticData } from "@/lib/demo/seed";
 
 export async function GET(request: NextRequest) {
   const auth = await withUser(request);
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const [
+  let [
     documents,
     medications,
     doses,
@@ -50,11 +51,6 @@ export async function GET(request: NextRequest) {
     appointments,
     observations,
     visits,
-    connections,
-    pharmacyBills,
-    prescriptions,
-    familyMembers,
-    notifications,
   ] = await Promise.all([
     store.listDocuments(requestedProfileId),
     store.listMedications(requestedProfileId),
@@ -63,12 +59,40 @@ export async function GET(request: NextRequest) {
     store.listAppointments(requestedProfileId),
     store.listObservations(requestedProfileId),
     store.listVisits(requestedProfileId),
+  ]);
+
+  const [
+    connections,
+    pharmacyBills,
+    prescriptions,
+    familyMembers,
+    notifications,
+  ] = await Promise.all([
     store.listConnections(requestedProfileId),
     store.listPharmacyBills(requestedProfileId),
     store.listPrescriptions(requestedProfileId),
     store.listFamilyMembers(user.id),
     store.listNotifications(user.id, requestedProfileId),
   ]);
+
+  // If this profile has zero documents and zero medications, automatically seed a demo dossier so the dashboard is immediately functional
+  if (requestedProfileId === user.id && documents.length === 0 && medications.length === 0) {
+    try {
+      await seedSyntheticData(user);
+      [documents, medications, doses, timeline, appointments, observations, visits] = await Promise.all([
+        store.listDocuments(requestedProfileId),
+        store.listMedications(requestedProfileId),
+        store.listDoses(requestedProfileId),
+        store.listTimeline(requestedProfileId),
+        store.listAppointments(requestedProfileId),
+        store.listObservations(requestedProfileId),
+        store.listVisits(requestedProfileId),
+      ]);
+    } catch {
+      // Continue gracefully
+    }
+  }
+
   const todaysDoses = doses
     .filter((d) => d.scheduledDate === today)
     .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime));

@@ -1262,7 +1262,7 @@ export default function DashboardPage() {
                   {data?.wellnessAnalysis && (
                     <div className="flex items-center gap-2 self-start sm:self-auto">
                       <span className="text-[11px] font-bold text-[#08193C] bg-[#EDF3F7] border border-[#DDB549]/40 px-3 py-1 rounded-full">
-                        Wellness Vitality Score: {data.wellnessAnalysis.overallWellnessScore}/100
+                        Wellness Vitality Score: {data.wellnessAnalysis?.overallWellnessScore ?? 85}/100
                       </span>
                     </div>
                   )}
