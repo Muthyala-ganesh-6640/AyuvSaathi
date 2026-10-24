@@ -2,8 +2,12 @@ export type RangeStatus = "in_range" | "out_of_range" | "unavailable";
 
 function parseNumber(raw: string) {
   const cleaned = raw.replace(/,/g, "").trim();
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : null;
+  const match = cleaned.match(/[+-]?\d+(?:\.\d+)?/);
+  if (match) {
+    const n = Number.parseFloat(match[0]);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
 }
 
 /**
@@ -11,9 +15,20 @@ function parseNumber(raw: string) {
  * Missing or unparseable ranges are reported as unavailable — never invented.
  */
 export function compareToSourceRange(valueRaw: string, rangeRaw?: string | null): RangeStatus {
-  if (!rangeRaw || !rangeRaw.trim()) return "unavailable";
+  const valueUpper = valueRaw.trim().toUpperCase();
+  // Check for explicit laboratory flags like "42.7 H", "HIGH", "3.2 L", "LOW"
+  const hasHighFlag = /\bH\b|\bHIGH\b|\bELEVATED\b/i.test(valueUpper);
+  const hasLowFlag = /\bL\b|\bLOW\b|\bDECREASED\b/i.test(valueUpper);
+
+  if (!rangeRaw || !rangeRaw.trim()) {
+    if (hasHighFlag || hasLowFlag) return "out_of_range";
+    return "unavailable";
+  }
   const value = parseNumber(valueRaw);
-  if (value === null) return "unavailable";
+  if (value === null) {
+    if (hasHighFlag || hasLowFlag) return "out_of_range";
+    return "unavailable";
+  }
 
   const range = rangeRaw.trim().replace(/–|—/g, "-");
 
@@ -40,6 +55,8 @@ export function compareToSourceRange(valueRaw: string, rangeRaw?: string | null)
     if (inclusive) return value >= n ? "in_range" : "out_of_range";
     return value > n ? "in_range" : "out_of_range";
   }
+
+  if (hasHighFlag || hasLowFlag) return "out_of_range";
 
   return "unavailable";
 }

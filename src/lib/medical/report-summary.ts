@@ -49,7 +49,8 @@ export function buildReportAnalysis(
 
   for (const obs of observations) {
     const rangeComparison = compareToSourceRange(obs.value, obs.referenceRange);
-    const numVal = Number.parseFloat(obs.value);
+    const numMatch = obs.value.replace(/,/g, "").match(/[+-]?\d+(?:\.\d+)?/);
+    const numVal = numMatch ? Number.parseFloat(numMatch[0]) : Number.NaN;
 
     if (rangeComparison === "in_range") {
       normalItems.push({
