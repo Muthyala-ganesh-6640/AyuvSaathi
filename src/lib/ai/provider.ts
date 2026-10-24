@@ -203,23 +203,75 @@ async function chat(messages: ChatMessage[]): Promise<string> {
 }
 
 function extractJson(raw: string): unknown {
-  const cleaned = raw
+  let cleaned = raw
     .replace(/```json/gi, "")
     .replace(/```/g, "")
     .trim();
 
   const start = cleaned.indexOf("{");
+  if (start < 0) {
+    throw new Error("AI_MALFORMED");
+  }
+  cleaned = cleaned.slice(start);
+
+  // 1. Attempt direct JSON parsing if closing brace exists
   const end = cleaned.lastIndexOf("}");
-
-  if (start < 0 || end < start) {
-    throw new Error("AI_MALFORMED");
+  if (end >= 0) {
+    try {
+      return JSON.parse(cleaned.slice(0, end + 1)) as unknown;
+    } catch {
+      // JSON may be truncated or cut off inside an unclosed structure
+    }
   }
 
-  try {
-    return JSON.parse(cleaned.slice(start, end + 1)) as unknown;
-  } catch {
-    throw new Error("AI_MALFORMED");
+  // 2. Repair truncated JSON by closing open arrays, objects, and strings
+  const lastItemEnd = cleaned.lastIndexOf("}");
+  if (lastItemEnd > 0) {
+    let candidate = cleaned.slice(0, lastItemEnd + 1);
+    let openBrackets = 0;
+    let openBraces = 0;
+    let inString = false;
+    let escape = false;
+
+    for (let i = 0; i < candidate.length; i++) {
+      const c = candidate[i];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (c === "\\") {
+        escape = true;
+        continue;
+      }
+      if (c === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (!inString) {
+        if (c === "{") openBraces++;
+        else if (c === "}") openBraces--;
+        else if (c === "[") openBrackets++;
+        else if (c === "]") openBrackets--;
+      }
+    }
+
+    while (openBrackets > 0) {
+      candidate += "]";
+      openBrackets--;
+    }
+    while (openBraces > 0) {
+      candidate += "}";
+      openBraces--;
+    }
+
+    try {
+      return JSON.parse(candidate) as unknown;
+    } catch {
+      // Continue to throw error below
+    }
   }
+
+  throw new Error("AI_MALFORMED");
 }
 
 export async function extractFromText(input: {
@@ -317,14 +369,11 @@ handwritingDetected, unreadableRegions, notes, overallConfidence.
 
 Set documentType to "discharge_summary". Write a concise, clear summary in ${languageName} covering admission and discharge dates, stated diagnosis, treatment/procedures, condition at discharge, prescribed discharge medicines, and follow-up instructions only if each is legible in the document. Put the summary in dischargeSummary and a faithful translation in translatedSummary. Omit unavailable details; do not guess or add medical advice. Preserve medicine names, doses, units, and dates. Include observations and medicines only when explicitly listed. Mark unclear text as uncertain and describe unreadable regions. Return valid JSON only.`
     : isLabReport
-      ? `Read this medical laboratory / diagnostic test report image and return one compact JSON object with:
-documentType, sourceLanguage, labName, reportDate, patientNamePrinted, doctorName,
-dischargeSummary, translatedSummary,
-observations[{name,value,unit,referenceRange,page,confidence,uncertain,presentInSource}],
-medications[{name,strength,instructions,route,frequency,handwriting,uncertain}],
-handwritingDetected, unreadableRegions, notes, overallConfidence.
-
-Set documentType to "lab_report". Carefully extract all test names, numerical or qualitative results, units, and reference ranges into observations. Write a comprehensive, clear clinical summary of this report in ${languageName} in dischargeSummary: summarize what tests were performed, key findings, which parameters are within standard ranges, and clearly highlight any abnormal or out-of-range values. Put the summary in dischargeSummary and a faithful translation in translatedSummary. Omit unavailable details; do not guess. Return valid JSON only.`
+      ? `Read this medical laboratory / diagnostic test report image and return JSON:
+documentType ("lab_report"), labName, reportDate, patientNamePrinted, doctorName,
+dischargeSummary, observations: [{name, value, unit, referenceRange}].
+Do not output specimen or test_method.
+In dischargeSummary, write a 2-sentence clinical summary highlighting normal results and out-of-range values. Return compact valid JSON only.`
     : `Read only this prescription; ignore unrelated text or documents. Return one compact JSON object with:
 documentType, sourceLanguage, reportDate, patientNamePrinted, doctorName,
 prescriptionSummary, translatedSummary,
@@ -340,6 +389,9 @@ Set documentType to "prescription". Keep each summary to 1–2 concise sentences
     () => controller.abort(),
     Number(env.AI_TIMEOUT_MS ?? 45000),
   );
+
+  const isPrescription = documentType === "prescription";
+  const maxTokens = isPrescription ? 900 : 980;
 
   try {
     if (provider === "anthropic") {
@@ -405,7 +457,7 @@ Set documentType to "prescription". Keep each summary to 1–2 concise sentences
         body: JSON.stringify({
           model: modelName(),
           temperature: 0,
-          max_tokens: 900,
+          max_tokens: maxTokens,
           response_format: { type: "json_object" },
           messages: [
             { role: "system", content: system },
@@ -427,7 +479,7 @@ Set documentType to "prescription". Keep each summary to 1–2 concise sentences
             body: JSON.stringify({
               model: modelName(),
               temperature: 0,
-              max_tokens: 900,
+              max_tokens: maxTokens,
               messages: [
                 { role: "system", content: system },
                 { role: "user", content },
@@ -447,16 +499,25 @@ Set documentType to "prescription". Keep each summary to 1–2 concise sentences
           message?: { content?: string | null };
         }[];
       };
-      if (data.choices?.[0]?.finish_reason === "length") {
+      const isTruncated = data.choices?.[0]?.finish_reason === "length";
+      raw = data.choices?.[0]?.message?.content ?? "";
+      if (isTruncated && !raw.trim()) {
         throw new Error("AI_RESPONSE_TRUNCATED");
       }
-      raw = data.choices?.[0]?.message?.content ?? "";
     }
   } finally {
     clearTimeout(timer);
   }
 
-  const responseData = extractJson(raw);
+  let responseData: unknown;
+  try {
+    responseData = extractJson(raw);
+  } catch (err) {
+    if (raw.includes("prescription") || raw.includes("documentType")) {
+      throw new Error("AI_RESPONSE_TRUNCATED");
+    }
+    throw err;
+  }
   if (
     responseData === null ||
     typeof responseData !== "object" ||
@@ -466,6 +527,78 @@ Set documentType to "prescription". Keep each summary to 1–2 concise sentences
   }
 
   const candidate = { ...(responseData as Record<string, unknown>) };
+
+  // Normalize common patient, doctor, lab, and date aliases from laboratory formats
+  const patientInfo = (candidate.patient_information || candidate.patient || {}) as Record<string, unknown>;
+  if (!candidate.patientNamePrinted && patientInfo.name) {
+    candidate.patientNamePrinted = String(patientInfo.name);
+  }
+  if (!candidate.doctorName && (patientInfo.referred_by || candidate.referred_by || candidate.prescriberName)) {
+    candidate.doctorName = String(patientInfo.referred_by || candidate.referred_by || candidate.prescriberName);
+  }
+  if (!candidate.labName && (candidate.reporting_org || candidate.laboratory || candidate.hospitalName)) {
+    candidate.labName = String(candidate.reporting_org || candidate.laboratory || candidate.hospitalName);
+  }
+  const timestamps = (candidate.timestamps || {}) as Record<string, unknown>;
+  if (!candidate.reportDate && (timestamps.reported_on || candidate.reported_on || candidate.date)) {
+    candidate.reportDate = String(timestamps.reported_on || candidate.reported_on || candidate.date);
+  }
+
+  // Normalize summary fields
+  if (!candidate.dischargeSummary) {
+    candidate.dischargeSummary = (
+      candidate.summary ||
+      candidate.clinical_summary ||
+      candidate.report_summary ||
+      candidate.findings ||
+      candidate.interpretation ||
+      candidate.prescriptionSummary ||
+      undefined
+    ) as string | undefined;
+  }
+
+  // Normalize observations from test_results, tests, lab_results, parameters, or findings
+  const rawObsList = (
+    Array.isArray(candidate.observations) ? candidate.observations :
+    Array.isArray(candidate.test_results) ? candidate.test_results :
+    Array.isArray(candidate.tests) ? candidate.tests :
+    Array.isArray(candidate.lab_results) ? candidate.lab_results :
+    Array.isArray(candidate.results) ? candidate.results :
+    Array.isArray(candidate.parameters) ? candidate.parameters :
+    []
+  );
+
+  const normalizedObservations = rawObsList
+    .map((obs) => {
+      if (!obs || typeof obs !== "object") return null;
+      const o = obs as Record<string, unknown>;
+      const name = String(o.name || o.test_name || o.testName || o.parameter || o.test || "").trim();
+      const value = String(o.value || o.result || o.test_result || o.val || "").trim();
+      if (!name || !value) return null;
+
+      const unit = String(o.unit || o.units || o.measurement_unit || "").trim();
+      const referenceRange = String(
+        o.referenceRange ||
+        o.reference_range ||
+        o.reference_interval ||
+        o.biological_reference_interval ||
+        o.ref_range ||
+        o.range ||
+        ""
+      ).trim();
+
+      return {
+        name,
+        value,
+        unit,
+        referenceRange: referenceRange || undefined,
+        uncertain: Boolean(o.uncertain),
+        presentInSource: o.presentInSource !== false,
+      };
+    })
+    .filter(Boolean);
+
+  candidate.observations = normalizedObservations;
   const notes = Array.isArray(candidate.notes)
     ? candidate.notes.filter((note): note is string => typeof note === "string")
     : [];
